@@ -1,0 +1,12 @@
+zig-out/
+.zig-cache/
+mdm.db
+*.db-journal
+vendor/
+zig-pkg/
+*.o
+*.a
+.DS_Store
+agent/.gradle/
+agent/**/build/
+agent/local.properties
