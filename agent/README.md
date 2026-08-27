@@ -1,29 +1,21 @@
-# ZigMDM Android Agent (minimal)
+# ZigMDM Android Agent
 
-Kotlin scaffold for Device-Owner agent talking to MagiMDM / ZigMDM.
+Kotlin scaffold. Repo: https://github.com/5mil/MagiMDM
+Pool companion: https://github.com/fivemil/YarnRake
 
-**Repo:** https://github.com/5mil/MagiMDM
+## Mining policy
 
-See [main README](../README.md) and [docs/DEPLOY.md](../docs/DEPLOY.md).
+Off unless the assigned policy includes:
 
-## Quick start
-
-1. Open `agent/` in Android Studio
-2. Emulator server URL: `http://10.0.2.2:8787`
-3. Optional Device Owner:
-
-```bash
-adb shell dpm set-device-owner com.zigmdm.agent/.MdmDeviceAdminReceiver
+```json
+"mining": {"enabled": true, "algo": "skein", "stratum_url": "stratum+tcp://HOST:3333", "max_cpu_pct": 25}
 ```
 
-4. Enroll with token from `/enroll` → Start polling
+`MiningController` stores the flag and stops when `enabled` is false or omitted.
+No hasher is bundled — parental/work templates stay off.
 
 ## Polling
 
-- In-app: ~30s (`MainActivity`)
-- Background: WorkManager `PollWorker` (≥15 min)
-- Boot: `BootReceiver` reschedules WorkManager
+In-app ~30s; WorkManager `PollWorker` ≥15 min; `BootReceiver` reschedules.
 
-## Commands
-
-`lock`, `reboot`, `wipe` (refused in scaffold), `deploy_apk` (simulated)
+Commands: lock, reboot, wipe (refused in scaffold), deploy_apk (simulated).
