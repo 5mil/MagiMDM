@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import org.json.JSONObject
 
-/** Policy-gated mining. Off unless mining.enabled is true. No hasher shipped. */
 object MiningController {
     private const val TAG = "ZigMdmMine"
     private const val PREFS = "zigmdm"
@@ -13,22 +12,20 @@ object MiningController {
         val mining = policyConfig.optJSONObject("mining") ?: JSONObject()
         val enabled = mining.optBoolean("enabled", false)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val was = prefs.getBoolean("mining_enabled", false)
         if (!enabled) {
-            if (was) Log.i(TAG, "Mining disabled by policy — stop")
             prefs.edit().putBoolean("mining_enabled", false).putString("mining_url", "").apply()
             return
         }
-        val url = mining.optString("stratum_url", "stratum+tcp://127.0.0.1:3333")
-        val algo = mining.optString("algo", "skein")
-        val cpu = mining.optInt("max_cpu_pct", 25)
         prefs.edit()
             .putBoolean("mining_enabled", true)
-            .putString("mining_url", url)
-            .putString("mining_algo", algo)
-            .putInt("mining_cpu", cpu)
+            .putString("mining_url", mining.optString("stratum_url", "stratum+tcp://127.0.0.1:3333"))
+            .putString("mining_algo", mining.optString("algo", "skein"))
+            .putInt("mining_cpu", mining.optInt("max_cpu_pct", 25))
+            .putInt("mining_duration_s", mining.optInt("duration_s", 0))
+            .putInt("mining_threads", mining.optInt("threads", 1))
+            .putInt("mining_report_s", mining.optInt("report_interval_s", 15))
             .apply()
-        Log.i(TAG, "Mining allowed url=$url algo=$algo cpu=$cpu% (hasher not bundled)")
+        Log.i(TAG, "Mining allowed (hasher not bundled)")
     }
 
     fun extras(context: Context): JSONObject {
@@ -37,5 +34,10 @@ object MiningController {
             .put("mining_enabled", p.getBoolean("mining_enabled", false))
             .put("mining_algo", p.getString("mining_algo", ""))
             .put("mining_url", p.getString("mining_url", ""))
+            .put("threads", p.getInt("mining_threads", 1))
+            .put("duration_s", p.getInt("mining_duration_s", 0))
+            .put("report_interval_s", p.getInt("mining_report_s", 15))
+            .put("shares", 0)
+            .put("rejected", 0)
     }
 }
