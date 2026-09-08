@@ -1,36 +1,48 @@
-# Contacts, calls, and texts (student Android)
+# Contacts, calls, texts, and comms archive
 
-Policy decides who the phone may call, text, and receive.
-Emergency numbers (911, 112, 000, 110, 119) are **always** allowed.
+Policy decides who the student phone may call, text, and receive.
+Emergency numbers (911, 112, 000, 110, 119, 999) are always allowed and are logged as emergency.
+
+Household rule: the student knows the school phone is monitored. This is not covert spyware.
 
 ## Policy JSON
 
 ```json
 "comms": {
   "emergency_always": true,
-  "allow_numbers": ["+15555550100", "5555550101"],
+  "allow_numbers": ["+15555550100"],
   "incoming": "allowlist",
   "outgoing_calls": "allowlist",
-  "sms": "allowlist"
+  "sms": "allowlist",
+  "logging": "metadata"
 }
 ```
 
-Values for incoming / outgoing_calls / sms:
+`logging` values:
 
-| Value | Meaning |
-|-------|---------|
-| `allowlist` | Only `allow_numbers` |
-| `block_all` | Nobody (exam) except emergency calls |
-| `open` | No extra filter (Monitor / some Weekend) |
+| Value | Stored |
+|-------|--------|
+| `off` | Nothing |
+| `deny_only` | Blocked call/SMS attempts |
+| `metadata` | Time, direction, number, allowed/denied, SMS length — **not** SMS body |
+| `sms_body` | Metadata + SMS/MMS body **only if** the agent is the default SMS app |
 
-SchoolDay default: allowlist both directions + SMS.  
-ExamLock: incoming allowlist (parent), outgoing_calls + sms `block_all`.  
-AfterHours: allowlist, usually a longer number list.
+## What can be archived
 
-## How the agent enforces
+- Calls the screening service sees (in/out, number, allow/deny)
+- Native SMS/MMS when MagiMDM is default SMS role (`sms_body` or metadata)
+- Agent check-ins and policy changes (existing audit)
 
-- Incoming: `CallGateService` (CallScreeningService) rejects numbers not on the list.
-- Outgoing calls: Device Owner `DISALLOW_OUTGOING_CALLS` when mode is `block_all`; otherwise screening + stored allowlist. A custom default dialer is the only way to *hard* stop a raw `tel:` intent to a random number on every OEM — document that gap.
-- SMS: Device Owner `DISALLOW_SMS` when `sms=block_all`. Allowlist SMS needs the agent as **default SMS app** (next slice: `SmsGate`). Until then treat SMS allowlist as best-effort + DISALLOW when exam.
+## What cannot be archived (do not claim otherwise)
 
-Parent apps do not place student calls. They only edit the allowlist on the console/policy.
+- WhatsApp, Signal, iMessage, RCS in Google Messages if not default SMS, Snapchat, etc. (E2E)
+- HTTPS bodies of arbitrary apps
+- A second unmanaged phone
+
+Use app allowlists + school hours so those apps are not installed, rather than pretending to decrypt them.
+
+## Server
+
+`POST /api/agent/comms-log` with device uuid + events[].
+Table `comms_log`. Nightly `deploy/backup.sh` already copies SQLite to `/srv/mdm/backups`.
+Optional: `tools/comms_export.sh` → CSV on SAS.
