@@ -4,5 +4,12 @@
   "mode": "exam",
   "kiosk": true,
   "install_lock": true,
-  "camera": false
+  "camera": false,
+  "comms": {
+    "emergency_always": true,
+    "allow_numbers": ["+15555550100"],
+    "incoming": "allowlist",
+    "outgoing_calls": "block_all",
+    "sms": "block_all"
+  }
 }

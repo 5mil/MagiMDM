@@ -6,5 +6,12 @@
   "apps_allow": ["org.mozilla.firefox", "org.documentfoundation.libreoffice"],
   "install_lock": true,
   "camera": false,
-  "usb_file_transfer": false
+  "usb_file_transfer": false,
+  "comms": {
+    "emergency_always": true,
+    "allow_numbers": ["+15555550100"],
+    "incoming": "allowlist",
+    "outgoing_calls": "allowlist",
+    "sms": "allowlist"
+  }
 }

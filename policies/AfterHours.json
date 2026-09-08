@@ -4,5 +4,12 @@
   "mode": "after",
   "hours": { "start": "15:00", "end": "20:00" },
   "curfew": "20:00",
-  "install_lock": true
+  "install_lock": true,
+  "comms": {
+    "emergency_always": true,
+    "allow_numbers": ["+15555550100"],
+    "incoming": "allowlist",
+    "outgoing_calls": "allowlist",
+    "sms": "allowlist"
+  }
 }

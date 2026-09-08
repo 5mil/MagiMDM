@@ -35,6 +35,7 @@ class CommandExecutor(private val context: Context) {
     fun applyPolicyJson(raw: String?) {
         val cfg = try { if (raw != null) JSONObject(raw) else JSONObject() } catch (_: Exception) { JSONObject() }
         MiningController.apply(context, cfg)
+        CommsPolicy.apply(context, cfg, dpm, admin, isOwner)
         val mode = cfg.optString("mode", Schedule.pickMode())
         if (!isOwner) {
             Log.w(TAG, "Not device owner — DPC skipped; mode=$mode")
