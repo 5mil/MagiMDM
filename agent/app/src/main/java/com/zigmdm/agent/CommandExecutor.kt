@@ -4,6 +4,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.os.Build
+import android.os.UserManager
 import android.util.Log
 import org.json.JSONObject
 
@@ -19,19 +20,36 @@ class CommandExecutor(private val context: Context) {
             "reboot" -> reboot()
             "wipe" -> wipe()
             "deploy_apk" -> deployApk(cmd)
+            "applyPolicy" -> {
+                applyPolicyJson(cmd.payload)
+                JSONObject().put("status", "ok").put("type", "applyPolicy")
+            }
             else -> JSONObject().put("status", "ignored").put("type", cmd.type)
         }
     }
 
     fun applyPolicy(policy: Policy) {
-        val cfg = policy.config
+        applyPolicyJson(policy.config.toString())
+    }
+
+    fun applyPolicyJson(raw: String?) {
+        val cfg = try { if (raw != null) JSONObject(raw) else JSONObject() } catch (_: Exception) { JSONObject() }
         MiningController.apply(context, cfg)
+        val mode = cfg.optString("mode", Schedule.pickMode())
         if (!isOwner) {
-            Log.w(TAG, "Not device owner — DPC skipped; mining flag still applied")
+            Log.w(TAG, "Not device owner — DPC skipped; mode=$mode")
             return
         }
         if (cfg.has("camera")) {
             dpm.setCameraDisabled(admin, !cfg.optBoolean("camera", true))
+        }
+        val lockInstall = cfg.optBoolean("install_lock", mode == "school" || mode == "exam")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (lockInstall) {
+                dpm.addUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+            } else {
+                dpm.clearUserRestriction(admin, UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES)
+            }
         }
     }
 
