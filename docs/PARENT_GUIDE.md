@@ -18,17 +18,33 @@ The web console is http://127.0.0.1:8787 or https://mdm.home behind Caddy. The p
 
 Student policies keep mining off. Leave it off.
 
-src/main.zig and src/db.zig are on GitHub main (commit 15e9343 and the main.zig restore before it). You no longer copy those files by hand.
+src/main.zig and src/db.zig are on GitHub main. Pull the tree. Do not copy those files by hand.
+
+## Hardware
+
+Any always-on Linux box on the house LAN works. Examples: leftover desktop, NUC, mini PC, used ThinkCentre, a VM on a NAS, a Raspberry Pi 5 if you can get Zig 0.16 on it. x86_64 is the path of least pain. ARM is fine if you build from source.
+
+You need:
+
+- disk that survives a reboot (SSD is enough)
+- a folder for backups, APKs, and USB packs (USB disk, second partition, NAS share, or just /var/backups/mdm)
+- the box stays on during school hours
+- it is not a student laptop
+
+One machine can host MagiMDM, Moodle, and RosarioSIS. Or split them across VMs. Names stay the same either way.
+
+This guide uses /opt/MagiMDM and /srv/mdm as path examples. Change them if your box is laid out differently. What matters is one working directory and one database file.
 
 ## Clone and build
 
-Need Zig 0.16 on the Mini-ITX. Debian/Ubuntu packages will be too old. Use the official tarball.
+Need Zig 0.16. Distro packages will be too old. Use the official tarball for your CPU.
 
+    sudo mkdir -p /opt
     cd /opt
-    git clone https://github.com/5mil/MagiMDM.git
+    sudo git clone https://github.com/5mil/MagiMDM.git
     cd MagiMDM
     git log -1 --oneline
-    # you want src/main.zig and src/db.zig present
+    # src/main.zig and src/db.zig should be in src/
 
     git clone --depth 1 https://github.com/karlseguin/zqlite.zig.git vendor/zqlite
     git clone --depth 1 https://github.com/karlseguin/http.zig.git vendor/httpz
@@ -45,7 +61,7 @@ First start creates:
 - policies Baseline, SchoolDay, AfterHours, ExamLock, Weekend, Monitor
 - lab token named dev (100 uses)
 
-Open http://127.0.0.1:8787/login on the Mini-ITX. Sign in. Change that password the same hour.
+Open http://127.0.0.1:8787/login on that machine. Sign in. Change that password the same hour.
 
 Lab check from the same directory:
 
@@ -62,42 +78,44 @@ To pull later:
     zig build
     sudo systemctl restart zig-mdm
 
-## First weekend on the Mini-ITX
+On a Mac or Windows build host you can compile and copy the binary to the Linux box. Run it on Linux. Do not run the household server as a student login.
 
-Install Debian or Ubuntu on the SSD. Mount the SAS disk at /srv/mdm.
+## First weekend
+
+Install Debian, Ubuntu, or whatever Linux you already know. Give the MagiMDM user a home that is not a student account.
 
     sudo mkdir -p /srv/mdm/backups /srv/mdm/apk /srv/mdm/usb
     sudo mkdir -p /var/lib/zigmdm
     sudo ln -sfn /opt/MagiMDM/data/mdm.db /var/lib/zigmdm/mdm.sqlite
 
-That symlink is so deploy/backup.sh and the binary look at the same file. The binary still writes data/mdm.db relative to WorkingDirectory.
-
-Install the unit:
+That symlink is so deploy/backup.sh and the binary look at the same file. The binary still writes data/mdm.db relative to WorkingDirectory. If you keep the tree somewhere else, point the symlink and the unit at that tree.
 
     sudo cp /opt/MagiMDM/zig-out/bin/zig-mdm /usr/local/bin/zig-mdm
     sudo cp /opt/MagiMDM/deploy/zig-mdm.service /etc/systemd/system/
     sudo systemctl daemon-reload
     sudo systemctl enable --now zig-mdm
 
-Edit the unit if it does not set WorkingDirectory=/opt/MagiMDM. If WorkingDirectory is wrong, a second empty database appears and your tokens vanish after a reboot.
+Edit the unit so WorkingDirectory is the clone. If WorkingDirectory is wrong, a second empty database appears and your tokens vanish after a reboot.
 
-Caddy in front. Put this in /etc/hosts on machines that stay on the LAN:
+No systemd? run the binary under s6, OpenRC, launchd, or a tmux session. Same rule: one working directory.
+
+Caddy in front. On machines that stay on the LAN, /etc/hosts (or your router DNS) can say:
 
     192.168.x.x  mdm.home moodle.home sis.home
 
-Copy deploy/Caddyfile. Reload Caddy. Open https://mdm.home/login.
+Use the LAN IP of whatever box is hosting it. Copy deploy/Caddyfile. Reload Caddy. Open https://mdm.home/login.
 
 Only parent users. Kids never get a console account.
 
     sudo /opt/MagiMDM/deploy/backup.sh
 
-A file should show up under /srv/mdm/backups.
+A file should show up under /srv/mdm/backups (or wherever you pointed backups).
 
-Tailscale on the Mini-ITX if you want the parent app away from home. Use the Tailscale name as the server URL. Do not open 443 to the internet.
+Tailscale or WireGuard on the server if you want the parent app away from home. Use that name as the server URL. Do not open 443 to the whole internet.
 
 If MagiMDM is off, devices keep the last policy and stop taking new commands.
 
-Moodle and RosarioSIS can live on the same box or a VM next to it:
+Moodle and RosarioSIS can live on the same box or another VM:
 
     https://mdm.home
     https://moodle.home
@@ -141,7 +159,7 @@ Wipe the phone. On /enroll make a token labeled with their name. Do not reuse th
 
 Install the student agent as Device Owner. Play Store install is not enough. See agent/README.md.
 
-Enter https://mdm.home (or Tailscale) and the token. The device should appear. Last-seen should move within a minute. Reboot. Policy should still be there.
+Enter https://mdm.home (or your Tailscale/WireGuard name) and the token. The device should appear. Last-seen should move within a minute. Reboot. Policy should still be there.
 
 If they can uninstall the agent, it is not Device Owner. Start over.
 
@@ -173,7 +191,7 @@ SchoolDay allows Firefox and LibreOffice. Add the Moodle app later if you instal
 
 Term dates are in term_calendar (Fall 2026 seed). Put your dates there.
 
-End of term: tools/audit_export.sh writes a CSV onto the SAS disk.
+End of term: tools/audit_export.sh writes a CSV into your backup folder.
 
 ## Moodle
 
@@ -197,7 +215,7 @@ Create courses in RosarioSIS after the plugin is on, or they never show up in Mo
 
 People live in RosarioSIS. Moodle accounts come from the plugin. MagiMDM only knows devices.
 
-Keep a map on the Mini-ITX:
+Keep a map on the MagiMDM host:
 
     sqlite3 /opt/MagiMDM/data/mdm.db
 
@@ -219,11 +237,11 @@ Do not dump call or SMS logs into RosarioSIS.
 
 Install MagiMDM Parent from parent-app/android or parent-app/ios. Not the student agent.
 
-Server URL https://mdm.home or the Tailscale name. Parent username and password. You should see devices and the four buttons. Those buttons hit /devices/bulk the same way the web desk does.
+Server URL https://mdm.home or the VPN name. Parent username and password. You should see devices and the four buttons. Those buttons hit /devices/bulk the same way the web desk does.
 
 Enroll and reimage from the web console at home.
 
-If login fails: Tailscale off, URL missing https, or you used the wrong account.
+If login fails: VPN off, URL missing https, or you used the wrong account.
 
 Moodle and RosarioSIS have their own passwords. Do not reuse the MagiMDM admin one.
 
@@ -231,7 +249,7 @@ Moodle and RosarioSIS have their own passwords. Do not reuse the MagiMDM admin o
 
 zig-mdm will not start: missing vendor/zqlite or vendor/httpz, Zig is not 0.16, or WorkingDirectory is wrong.
 
-Two database files: you started the binary once from /opt/MagiMDM and once from elsewhere. Use the symlink above and one WorkingDirectory.
+Two database files: you started the binary once from the clone and once from elsewhere. Use one working directory and the symlink above.
 
 Device missing: never enrolled, or the token was already used. The lab token "dev" allows 100 uses. Real tokens are one use.
 
@@ -280,7 +298,7 @@ Mid-year: reimage one laptop from the USB stick.
 
 Exam week: quiz in Moodle, Exam button, practice the day before.
 
-June: audit_export.sh, Moodle backup to /srv/mdm, RosarioSIS rollover if you use it, new parent passwords, copy data/mdm.db to the SAS disk.
+June: audit_export.sh, Moodle backup into /srv/mdm, RosarioSIS rollover if you use it, new parent passwords, copy data/mdm.db onto the backup disk.
 
 ## Weekend check
 
@@ -288,7 +306,7 @@ https://mdm.home/login or http://127.0.0.1:8787/login loads.
 
 Password is no longer changeme. Kid has no MagiMDM account.
 
-backup.sh left a file on /srv/mdm/backups.
+backup.sh left a file in the backup folder.
 
 Android is Device Owner.
 
