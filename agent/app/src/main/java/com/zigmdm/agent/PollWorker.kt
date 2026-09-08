@@ -27,6 +27,7 @@ class PollWorker(appContext: Context, params: WorkerParameters) :
             for (cmd in poll.commands) {
                 api.ack(uuid, cmd.id, exec.execute(cmd))
             }
+            api.commsLog(uuid, CommsLog.drainJson(applicationContext))
             Log.i(TAG, "Poll ok cmds=${poll.commands.size}")
             Result.success()
         } catch (e: Exception) {

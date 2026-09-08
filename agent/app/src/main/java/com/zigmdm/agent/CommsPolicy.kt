@@ -26,6 +26,7 @@ object CommsPolicy {
             .putString("incoming", comms.optString("incoming", "allowlist"))
             .putString("outgoing", comms.optString("outgoing_calls", "allowlist"))
             .putString("sms", comms.optString("sms", "allowlist"))
+            .putString("logging", comms.optString("logging", "metadata"))
             .putBoolean("emergency", comms.optBoolean("emergency_always", true))
             .apply()
         if (!owner) return

@@ -10,6 +10,7 @@ class CallGateService : CallScreeningService() {
         val incoming = details.callDirection != Call.Details.DIRECTION_OUTGOING
         val dir = if (incoming) "in" else "out"
         val ok = CommsPolicy.allowed(this, handle, dir)
+        CommsLog.add(this, dir, "call", handle, ok)
         val resp = CallResponse.Builder()
         if (!ok) {
             resp.setRejectCall(true).setDisallowCall(true).setSkipCallLog(false).setSkipNotification(true)

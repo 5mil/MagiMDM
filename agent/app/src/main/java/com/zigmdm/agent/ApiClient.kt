@@ -22,7 +22,7 @@ class ApiClient(var baseUrl: String) {
         client.newCall(req).execute().use { resp ->
             val text = resp.body?.string().orEmpty()
             if (!resp.isSuccessful) throw RuntimeException("HTTP ${resp.code}: $text")
-            return JSONObject(text)
+            return if (text.isBlank()) JSONObject().put("ok", true) else JSONObject(text)
         }
     }
 
@@ -59,5 +59,10 @@ class ApiClient(var baseUrl: String) {
     fun ack(uuid: String, commandId: Long, result: JSONObject) {
         val res = post("/api/agent/ack", JSONObject().put("uuid", uuid).put("command_id", commandId).put("result", result))
         if (!res.optBoolean("ok", false)) throw RuntimeException("ack failed: $res")
+    }
+
+    fun commsLog(uuid: String, events: JSONArray) {
+        if (events.length() == 0) return
+        post("/api/agent/comms-log", JSONObject().put("uuid", uuid).put("events", events))
     }
 }
