@@ -1,278 +1,223 @@
-# MagiMDM parent guide — start to finish
+# MagiMDM parent guide
 
-This is the household manual. You run the servers at home. Students never log into the MagiMDM console or the parent apps.
+Household manual. You run the machines at home. Kids do not get a MagiMDM login.
 
-Repo: https://github.com/5mil/MagiMDM
+https://github.com/5mil/MagiMDM
 
-Print this + keep a tokens notebook **off** student devices.
+Print a copy. Keep tokens in a notebook that never sits on a student device.
 
----
+## What sits on the house server
 
-## 0. What you are combining
+MagiMDM watches phones and laptops and has four buttons: School, Free, Exam, Lock.
 
-Three separate programs. Do not merge them into one app.
+Moodle is where lessons and quizzes live.
 
-| System | Job | Who uses it |
-|--------|-----|-------------|
-| **MagiMDM** | Enroll phones/laptops, School / Free / Exam / Lock | Parent only |
-| **Moodle** | Lessons, quizzes, files, classwork | Parent assigns; student does work |
-| **RosarioSIS** (optional) | Roster, attendance, report cards, transcripts | Parent / teacher |
+RosarioSIS is optional. Use it if you want attendance letters, report cards, or a transcript. A first year can be MagiMDM plus Moodle and nothing else.
 
-| MagiMDM piece | Who uses it |
-|---------------|-------------|
-| House Mini-ITX + MagiMDM | Always-on server |
-| Web console `https://mdm.home` | You, on a browser |
-| Parent app (Android or iPhone) | You, away from the desk |
-| Student phone agent | Child's Android, Device Owner |
-| Student laptop agent | Child's Windows or Linux PC |
+Parent apps on your phone only watch and tap those four buttons. They do not replace Device Owner on the kid's Android.
 
-Parent apps **manage and watch**. They do not replace Device Owner on the child's phone.
+The console is https://mdm.home. The parent app is the same account. The student agent is a different APK (`agent/`). Do not install the parent app on the kid's phone.
 
-Moodle is classwork. MagiMDM is the device. RosarioSIS is paper-trail records. A single-family homeschool can run **MagiMDM + Moodle only** and add RosarioSIS later.
+`src/main.zig` and `src/db.zig` are still missing from public git. You need a built `zig-mdm` on the Mini-ITX before the console exists. Student policies keep mining turned off. Leave it off.
 
-### Honest status (read this)
+When the server is up:
 
-Public git still needs `src/main.zig` and `src/db.zig` before `zig build` produces a live console. Follow this guide on the Mini-ITX once that binary exists. Student policy templates keep `mining.enabled: false`. Leave it that way.
+    TOKEN=dev MDM_URL=http://127.0.0.1:8787 python3 tools/mock_pc_agent.py
 
-Self-test when the server is up:
+You should see an enroll line and poll lines. That is enough.
 
-```bash
-TOKEN=dev MDM_URL=http://127.0.0.1:8787 python3 tools/mock_pc_agent.py
-```
+## First weekend
 
-You want an enroll printout and repeating `poll` lines. That is “it works.” Mining to a pool is not a household goal.
+Install Debian or Ubuntu on the Mini-ITX SSD. Mount the SAS disk at /srv/mdm for backups, APKs, and USB packs.
 
----
+Build MagiMDM (`zig build`) or drop the binary at /usr/local/bin/zig-mdm. Enable `deploy/zig-mdm.service`. Database path is /var/lib/zigmdm/mdm.sqlite.
 
-## 1. First weekend — house server
+Put Caddy in front (`deploy/Caddyfile`) so the LAN uses https://mdm.home. Log in as admin / changeme and change the password the same hour. Only make parent users.
 
-1. Install Debian or Ubuntu on the Mini-ITX **SSD**.
-2. Attach the SAS disk (HBA). Mount it at `/srv/mdm` for backups, APKs, USB packs, Moodle backups.
-3. Build MagiMDM (`zig build`) or copy a binary to `/usr/local/bin/zig-mdm`.
-4. Install `deploy/zig-mdm.service`. Database: `/var/lib/zigmdm/mdm.sqlite`.
-5. Put Caddy in front (`deploy/Caddyfile`) so you use `https://mdm.home` on the LAN.
-6. Open the site, sign in as `admin` / `changeme`, **change the password immediately**.
-7. Only create parent users. Do not give the child a MagiMDM account.
-8. Run `deploy/backup.sh` once; confirm a file appears under `/srv/mdm/backups`.
-9. Optional: Tailscale on the Mini-ITX so parent apps work when you are not home. Do **not** publish port 443 to the whole internet.
+Run `deploy/backup.sh` once and check that a file showed up under /srv/mdm/backups.
 
-If MagiMDM is off, devices keep the last policy but will not get new commands.
+Tailscale on the Mini-ITX if you want the parent app away from home. Do not open 443 to the internet.
 
-Same box (or a second VM on the same LAN) later hosts Moodle and, if you want records, RosarioSIS. Point all three at Tailscale names, for example:
+If MagiMDM is off, devices keep the last policy and stop taking new commands.
 
-- `https://mdm.home`
-- `https://moodle.home`
-- `https://sis.home` (optional)
+Moodle can live on the same box or a VM next to it. RosarioSIS the same. Names that work on Tailscale:
 
----
+    https://mdm.home
+    https://moodle.home
+    https://sis.home
 
-## 2. Daily screen (web or parent app)
+## The four buttons
 
-After MagiMDM login you should see:
+School (SchoolDay): weekdays 08:00–15:00. Firefox should reach Moodle.
 
-- Each device: name, Android / Windows / Linux, last check-in, current policy
-- Four actions: **School**, **Free**, **Exam**, **Lock**
+Free (AfterHours): evening until curfew.
 
-| Button | Policy | Typical use | Classwork |
-|--------|--------|-------------|-----------|
-| School | SchoolDay | Weekdays 08:00–15:00 | Firefox / Moodle allowed |
-| Free | AfterHours | Evening until curfew | Moodle optional |
-| Exam | ExamLock | Tests | Kiosk / quiz only |
-| Lock | lock command | Dinner, bedtime, lost device | Nothing |
+Exam (ExamLock): tests. Point it at the quiz, not the whole web.
 
-Sick day: **Free** + a sentence in the audit (or a note on paper). Guest/tutor devices stay on **Monitor** (watch only).
+Lock: dinner, bedtime, lost phone.
 
-The phone and laptop agents also apply School vs AfterHours from the **clock on the device** so you do not have to tap School at 08:00 every day.
+Sick day is Free plus a line in the audit or on paper. A tutor laptop can stay on Monitor (watch only).
 
----
+The agents also switch School vs AfterHours from the clock on the device, so you do not have to tap School at 08:00 every morning.
 
-## 3. Enroll a student Android phone
+## Kid's Android
 
-1. Wipe the phone (or start unused).
-2. On the console: **Tokens** → new token, label with the child's name, assign **SchoolDay**.
-3. Install the **student** agent (`agent/` APK) as **Device Owner** (not a normal Play install). Follow `agent/README.md`.
-4. Enter `https://mdm.home` (or Tailscale URL) and the token.
-5. Confirm the device appears and last-seen updates within a minute.
-6. Reboot the phone. Policy must still be there.
-7. Write the child's name + `device.uuid` in the notebook (and in the map table in §7).
+Wipe the phone. In the console, make a token labeled with their name and assign SchoolDay.
 
-The child should not be able to uninstall the agent. If they can, it is not Device Owner — start over.
+Install the student agent as Device Owner. Normal Play install is not enough. See agent/README.md.
 
-Store one parent PIN / escape path in your notebook, not on the phone.
+Enter https://mdm.home (or the Tailscale URL) and the token. The device should show up and last-seen should move within a minute. Reboot. Policy should still be there.
 
----
+If they can uninstall the agent, it is not Device Owner. Start over.
 
-## 4. Enroll a student laptop (blank disk)
+Write their name and the device uuid in the notebook. Keep the parent PIN off that phone.
 
-The laptop is built during enroll. Do not install the agent on top of the child's existing Windows install if you want a clean school machine.
+## Kid's laptop
 
-1. Console → **Enroll PC** → Linux or Windows → create token.
-2. On the server:
+Image a blank disk. Do not layer the agent on top of their old Windows install if you want a school machine.
 
-   ```bash
-   TOKEN=thetoken MDM_URL=https://mdm.home ./tools/usb_pack.sh /tmp/usb windows
-   # or: ./tools/usb_pack.sh /tmp/usb linux
-   ```
+Console: Enroll PC, pick Linux or Windows, make a token. On the server:
 
-3. Copy that folder onto the installer USB.
-4. **Windows:** edit `Autounattend.xml` and change `ChangeMeParent!` / `ChangeMeStudent!` first. Use a licensed Win11 Pro USB.
-5. Boot the laptop from USB. The disk will be wiped.
-6. After first boot the agent enrolls. The console shows `platform=windows` or `linux`.
-7. Log in as **parent** for admin work. Daily use is the **student** account (no admin).
-8. Bookmark `https://moodle.home` in Firefox on the student account.
+    TOKEN=thetoken MDM_URL=https://mdm.home ./tools/usb_pack.sh /tmp/usb windows
 
-Linux: student must not be able to `systemctl disable zigmdm-agent`. Windows: student must not stop `ZigMdmAgent`.
+Or the same command with linux. Copy that folder onto the installer USB.
 
----
+Windows: edit Autounattend.xml first. Change ChangeMeParent! and ChangeMeStudent!. Use a licensed Win11 Pro USB. Booting that stick wipes disk 0.
 
-## 5. School year settings (MagiMDM)
+After first boot the device should show platform=windows or linux. Daily login is the student account (no admin). Parent account is for fixes only. Bookmark https://moodle.home in Firefox on the student account.
 
-Templates already in the repo (`policies/` and `sql/policies_school.sql`):
+On Linux the student must not be able to disable zigmdm-agent. On Windows they must not be able to stop ZigMdmAgent.
 
-- Baseline — floor on every device
-- SchoolDay — class hours
-- AfterHours — evening cap
-- ExamLock — tight
-- Weekend
-- Monitor — watch only
+## School year policies
 
-Edit JSON if you need different hours. **Keep `mining.enabled` false** on every template.
+Templates are in policies/ and sql/policies_school.sql: Baseline, SchoolDay, AfterHours, ExamLock, Weekend, Monitor.
 
-Put Moodle in the school-hours allowlist so class time can reach classwork:
+Change hours in the JSON if your day is different. Leave mining.enabled false on every one of them.
 
-```json
-"apps_allow": [
-  "org.mozilla.firefox",
-  "org.documentfoundation.libreoffice"
-]
-```
+SchoolDay already allows Firefox and LibreOffice. Add the Moodle app package later if you install it.
 
-Add the official Moodle app package later if you install it. ExamLock stays kiosk / single-task — point it at the quiz URL, not the whole web.
+Term dates are in term_calendar (seeded for Fall 2026). Put your dates there.
 
-Term dates live in `term_calendar` (seeded for Fall 2026). Change them to your calendar.
+End of term: tools/audit_export.sh writes a CSV onto the SAS disk.
 
-End of term: `tools/audit_export.sh` → CSV on the SAS disk.
+## Moodle
 
----
+Install it on the LAN. Serve it at https://moodle.home. Do not put it on the public internet.
 
-## 6. Moodle — classwork (do this before RosarioSIS)
+One category per child or per subject. You are the teacher. They are the student. Write those usernames next to the MagiMDM token.
 
-Moodle is enough for lessons. MagiMDM does not store grades.
+From the student device, open Moodle while SchoolDay is on. If it fails, Firefox is missing from the allowlist.
 
-1. Install Moodle on the LAN (same Mini-ITX VM or a neighbor VM). Reach it at `https://moodle.home` through Caddy / Tailscale. Do not expose it to the public internet.
-2. Create one category per child or per subject.
-3. Create the parent as a teacher (or manager). Create the student as a student. Write those usernames in the notebook next to the MagiMDM token.
-4. On the student laptop/phone, confirm Firefox can open Moodle **while SchoolDay is on**.
-5. Exam week: build the quiz in Moodle first, tap **Exam** on MagiMDM the day before as a rehearsal.
+Build exam quizzes in Moodle first. Tap Exam the day before as a dry run.
 
-Daily: child does work in Moodle. You flip MagiMDM buttons. You do not need RosarioSIS for that loop.
+Day to day the kid works in Moodle and you only touch MagiMDM buttons. RosarioSIS is not required for that.
 
----
+## RosarioSIS (skip if you do not need records)
 
-## 7. RosarioSIS — optional records
+Install at https://sis.home. Default is admin / admin. Change it.
 
-Add RosarioSIS when you want attendance letters, report cards, or a formal transcript. Skip this section for a first year if Moodle + MagiMDM is enough.
+School > Configuration > Plugins > Moodle:
 
-1. Install RosarioSIS (`https://sis.home`). Default login is `admin` / `admin` — change it.
-2. School → Configuration → Plugins → Moodle:
-   - Moodle URL = `https://moodle.home`
-   - API = REST
-   - Token from Moodle (Site administration → Server → Web services)
-   - Parent role ID from Moodle
-   - Student email field set
-3. Create courses in RosarioSIS **after** the plugin is live, or they will not appear in Moodle.
-4. People live in RosarioSIS. Moodle accounts are created by the plugin. MagiMDM still only knows devices.
+- URL https://moodle.home
+- REST
+- token from Moodle (Site administration > Server > Web services)
+- Parent role ID
+- student email field set
 
-### Bind a child to a device
+Create courses in RosarioSIS after that plugin is on, or they never show up in Moodle.
 
-Keep one map on the Mini-ITX (SQLite is fine):
+People live in RosarioSIS. Moodle accounts come from the plugin. MagiMDM still only knows devices.
 
-```sql
-CREATE TABLE IF NOT EXISTS sis_device_map (
-  student_name TEXT NOT NULL,
-  student_id   TEXT,          -- RosarioSIS STUDENT_ID when you have SIS
-  moodle_user  TEXT,
-  device_uuid  TEXT NOT NULL, -- MagiMDM devices.uuid
-  asset_tag    TEXT,
-  platform     TEXT,          -- android | windows | linux
-  status       TEXT           -- assigned | lost | returned
-);
-```
+Keep a small map on the Mini-ITX:
 
-On enroll, insert one row. On lost phone, set `status=lost` and tap **Lock**. On withdraw / end of year, set `returned` and retire the token.
+    CREATE TABLE IF NOT EXISTS sis_device_map (
+      student_name TEXT NOT NULL,
+      student_id   TEXT,
+      moodle_user  TEXT,
+      device_uuid  TEXT NOT NULL,
+      asset_tag    TEXT,
+      platform     TEXT,
+      status       TEXT
+    );
 
-Do not copy SMS bodies or comms logs into RosarioSIS.
+Insert a row when you enroll. Lost phone: status=lost and tap Lock. End of year: status=returned and retire the token.
 
----
+Do not dump call or SMS logs into RosarioSIS.
 
-## 8. Parent apps (your phone)
+## Parent app
 
-Install **MagiMDM Parent**, not the student agent.
+Install MagiMDM Parent from parent-app/android or parent-app/ios. Not the student agent.
 
-- Android: `parent-app/android`
-- iPhone: `parent-app/ios`
+Server URL, parent username, parent password. You should see devices and the four buttons.
 
-First launch:
+Enroll and reimage from the web console at home. The app is for last-seen and School / Free / Exam / Lock when you are out.
 
-1. Server URL (`https://mdm.home` or Tailscale name)
-2. Parent username + password (same as the web console)
-3. Device list + the four buttons
+If login fails, Tailscale is off, the URL is missing https, or you used a student account.
 
-Use the apps to check last-seen and flip School / Free / Exam / Lock. Enroll and reimage are easier on the web console at home.
+Moodle and RosarioSIS have their own passwords. Do not reuse the MagiMDM admin one.
 
-If login fails: Tailscale on, URL includes `https://`, account is a parent user.
+## When it breaks
 
-Moodle and RosarioSIS have their own logins. Do not reuse the MagiMDM admin password there.
+Device missing: never enrolled, or the token was already used.
 
----
+Last-seen stale: device off, Wi-Fi down, or MagiMDM down.
 
-## 9. When something is wrong
+Kid removed the agent: it was not Device Owner. Reimage.
 
-| Symptom | What to do |
-|---------|------------|
-| Device missing from list | Not enrolled, or token already used |
-| Last-seen old | Device off, Wi-Fi down, or MagiMDM down |
-| Child uninstalled agent | Not Device Owner / not locked service — reimage or re-enroll |
-| Policy ignored on laptop | Agent task/service stopped; log in as parent and fix |
-| Moodle opens on Free but not School | SchoolDay allowlist missing Firefox / Moodle |
-| Moodle user missing after adding a child in RosarioSIS | Plugin off, or course existed before the plugin |
-| Forgot MagiMDM parent password | Reset the hash in SQLite **on the Mini-ITX only** |
+Laptop ignores policy: the service or task stopped. Log in as parent and start it.
 
-Lost student phone: **Lock** from the app, mark `lost` in the map table, change Wi-Fi passwords if needed. Location only works if the agent and OS allow it.
+Moodle works on Free but not School: Firefox is not on the SchoolDay allowlist.
 
----
+New child in RosarioSIS has no Moodle user: plugin was off, or the course existed before the plugin.
 
-## 10. What this stack does not do
+Forgot the MagiMDM password: reset the hash in SQLite on the Mini-ITX, not from a kid device.
 
-- Control a second secret phone or a friend's computer
-- Replace house router DNS (use both)
-- Match Apple's iCloud family controls on a *student iPhone* (student devices are Android + Windows/Linux; parent *management* apps can be iPhone)
-- Survive a BIOS reset on a laptop with no firmware password
-- Pull Moodle grades back into RosarioSIS automatically
-- Mine crypto on student devices — leave `mining.enabled` false
+Lost phone: Lock, mark lost in the map, change the house Wi-Fi password if you need to. Location only works if the phone and the agent allow it.
 
-Write household rules the student has actually seen.
+## What this will not do
 
----
+It will not catch a second secret phone or a friend's computer.
 
-## 11. Yearly loop
+It does not replace router DNS. Use both.
 
-- **August:** update images, new tokens, enroll or reimage; set `term_calendar`; create Moodle courses (and RosarioSIS courses if you use SIS)
-- **Week one:** confirm SchoolDay reaches Moodle; confirm parent app last-seen
-- **Mid-year:** reimage one laptop from USB to prove the stick still works
-- **Exam week:** Moodle quiz ready, Exam button, rehearsal the day before
-- **June:** `tools/audit_export.sh`, Moodle backup to `/srv/mdm`, RosarioSIS rollover if used, rotate parent passwords, copy MagiMDM DB to SAS
+It is not Apple Family Sharing on a student iPhone. Student devices here are Android, Windows, or Linux. Your management phone can be an iPhone.
 
----
+A BIOS reset with no firmware password walks around the laptop agent.
 
-## 12. Weekend checklist (short)
+Moodle grades do not flow back into RosarioSIS by themselves.
 
-- [ ] Mini-ITX on, Caddy serving `https://mdm.home`
-- [ ] MagiMDM password changed; child has no console account
-- [ ] `deploy/backup.sh` produced a file on `/srv/mdm/backups`
-- [ ] Student Android is Device Owner and cannot uninstall the agent
-- [ ] Student laptop student account has no admin
-- [ ] School / Free / Exam / Lock all do something visible
-- [ ] Moodle opens during SchoolDay
-- [ ] Notebook has token, uuid, Moodle user (and SIS id if used)
-- [ ] `mining.enabled` is false on every policy
+Student devices do not mine. Keep mining.enabled false.
+
+Write house rules the kid has actually read.
+
+## The year
+
+August: new images, new tokens, enroll or reimage, fix term_calendar, make Moodle courses (and RosarioSIS courses if you use it).
+
+Week one: SchoolDay reaches Moodle. Parent app shows last-seen.
+
+Mid-year: reimage one laptop from the USB stick so you know the stick still works.
+
+Exam week: quiz in Moodle, Exam button, practice the day before.
+
+June: audit_export.sh, Moodle backup to /srv/mdm, RosarioSIS rollover if you use it, new parent passwords, copy the MagiMDM database to the SAS disk.
+
+## Weekend check
+
+Mini-ITX on, https://mdm.home loads.
+
+Password changed. Kid has no MagiMDM account.
+
+backup.sh left a file on /srv/mdm/backups.
+
+Android is Device Owner.
+
+Laptop student account has no admin.
+
+School, Free, Exam, and Lock each do something you can see.
+
+Moodle opens during SchoolDay.
+
+Notebook has token, uuid, Moodle user, and SIS id if you use SIS.
+
+mining.enabled is false on every policy.
