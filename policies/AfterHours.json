@@ -1,0 +1,8 @@
+{
+  "name": "AfterHours",
+  "mining": { "enabled": false },
+  "mode": "after",
+  "hours": { "start": "15:00", "end": "20:00" },
+  "curfew": "20:00",
+  "install_lock": true
+}

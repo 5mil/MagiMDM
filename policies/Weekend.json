@@ -1,0 +1,6 @@
+{
+  "name": "Weekend",
+  "mining": { "enabled": false },
+  "mode": "weekend",
+  "curfew": "21:00"
+}

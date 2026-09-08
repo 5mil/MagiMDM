@@ -1,0 +1,17 @@
+[Unit]
+Description=MagiMDM console
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mdm
+WorkingDirectory=/var/lib/zigmdm
+Environment=ZIGMDM_DB=/var/lib/zigmdm/mdm.sqlite
+Environment=ZIGMDM_PACKAGES=/srv/mdm/packages
+ExecStart=/usr/local/bin/zig-mdm
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

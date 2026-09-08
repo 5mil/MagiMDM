@@ -1,0 +1,8 @@
+{
+  "name": "ExamLock",
+  "mining": { "enabled": false },
+  "mode": "exam",
+  "kiosk": true,
+  "install_lock": true,
+  "camera": false
+}

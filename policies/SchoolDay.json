@@ -1,0 +1,10 @@
+{
+  "name": "SchoolDay",
+  "mining": { "enabled": false },
+  "mode": "school",
+  "hours": { "start": "08:00", "end": "15:00", "days": [1, 2, 3, 4, 5] },
+  "apps_allow": ["org.mozilla.firefox", "org.documentfoundation.libreoffice"],
+  "install_lock": true,
+  "camera": false,
+  "usb_file_transfer": false
+}
