@@ -1,0 +1,13 @@
+[Unit]
+Description=MagiMDM student PC agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/zigmdm-agent.sh
+Restart=always
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
