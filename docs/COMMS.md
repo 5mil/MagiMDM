@@ -1,11 +1,9 @@
 # Contacts, calls, texts, and comms archive
 
-Policy decides who the student phone may call, text, and receive.
-Emergency numbers (911, 112, 000, 110, 119, 999) are always allowed and are logged as emergency.
+Emergency numbers (911, 112, 000, 110, 119, 999) always allowed.
+Student should know the school phone is monitored.
 
-Household rule: the student knows the school phone is monitored. This is not covert spyware.
-
-## Policy JSON
+## Policy
 
 ```json
 "comms": {
@@ -18,31 +16,19 @@ Household rule: the student knows the school phone is monitored. This is not cov
 }
 ```
 
-`logging` values:
+logging: `off` | `deny_only` | `metadata` | `sms_body`
 
-| Value | Stored |
-|-------|--------|
-| `off` | Nothing |
-| `deny_only` | Blocked call/SMS attempts |
-| `metadata` | Time, direction, number, allowed/denied, SMS length — **not** SMS body |
-| `sms_body` | Metadata + SMS/MMS body **only if** the agent is the default SMS app |
+## Live routes to wire in main.zig
 
-## What can be archived
+| Method | Path |
+|--------|------|
+| POST | `/api/agent/comms-log` |
+| GET | `/api/parent/comms` |
+| GET | `/comms` page |
 
-- Calls the screening service sees (in/out, number, allow/deny)
-- Native SMS/MMS when MagiMDM is default SMS role (`sms_body` or metadata)
-- Agent check-ins and policy changes (existing audit)
+SQL: `sql/comms_log.sql`. Helpers: `src/comms_log.zig`.
+Export: `tools/comms_export.sh`.
 
-## What cannot be archived (do not claim otherwise)
+## Limits
 
-- WhatsApp, Signal, iMessage, RCS in Google Messages if not default SMS, Snapchat, etc. (E2E)
-- HTTPS bodies of arbitrary apps
-- A second unmanaged phone
-
-Use app allowlists + school hours so those apps are not installed, rather than pretending to decrypt them.
-
-## Server
-
-`POST /api/agent/comms-log` with device uuid + events[].
-Table `comms_log`. Nightly `deploy/backup.sh` already copies SQLite to `/srv/mdm/backups`.
-Optional: `tools/comms_export.sh` → CSV on SAS.
+No E2E app bodies. Full SMS archive needs default SMS role (`SmsGateStub`).
