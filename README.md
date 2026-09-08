@@ -8,6 +8,7 @@ Self-hosted MDM for a small homeschool fleet (phones + student PCs).
 
 | Doc | What |
 |-----|------|
+| [docs/PARENT_GUIDE.md](./docs/PARENT_GUIDE.md) | Full parent setup — MagiMDM + Moodle + optional RosarioSIS |
 | [docs/RUNBOOK.md](./docs/RUNBOOK.md) | Parent day-to-day |
 | [docs/PC_ENROLL.md](./docs/PC_ENROLL.md) | Blank-disk Linux/Windows enroll |
 | [docs/SCHOOL_YEAR.md](./docs/SCHOOL_YEAR.md) | What landed vs hardware |
