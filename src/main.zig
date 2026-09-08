@@ -1,405 +1,219 @@
-//! MagiMDM HTTP entry: console + agent API.
-
+//! MagiMDM console — std.net HTTP + libsqlite3.
 const std = @import("std");
-const httpz = @import("httpz");
+const dbmod = @import("db.zig");
 const auth = @import("auth.zig");
-const config = @import("config.zig");
-const db = @import("db.zig");
 const enroll_pc = @import("enroll_pc.zig");
-const poll_extras = @import("poll_extras.zig");
-const comms_log = @import("comms_log.zig");
+const config = @import("config.zig");
 
 const login_html =
-    \
-<!DOCTYPE html><html><head><meta charset="utf-8"/><title>MagiMDM login</title>
-    \
-<script src="https://cdn.tailwindcss.com"></script></head>
-    \
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center">
-    \
-<form method="post" action="/login" class="bg-slate-900 p-6 rounded w-80 space-y-3">
-    \
-<h1 class="text-lg">MagiMDM</h1>
-    \
-<input name="username" placeholder="username" class="w-full bg-slate-800 p-2 rounded"/>
-    \
-<input name="password" type="password" placeholder="password" class="w-full bg-slate-800 p-2 rounded"/>
-    \
-<button class="w-full bg-sky-700 rounded p-2">Sign in</button>
-    \
-<p class="text-xs text-slate-500">Change admin/changeme on first login.</p>
-    \
-</form></body></html>
+    \\<!DOCTYPE html><html><body style="font-family:sans-serif;background:#020617;color:#e2e8f0;padding:2rem">
+    \\<h1>MagiMDM</h1>
+    \\<form method="post" action="/login">
+    \\Username <input name="username" value="admin"/><br/><br/>
+    \\Password <input name="password" type="password"/><br/><br/>
+    \\<button>Sign in</button></form>
+    \\<p>Default admin / changeme — change immediately.</p></body></html>
 ;
 
-const home_html =
-    \
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>MagiMDM home</title>
-    \
-<script src="https://cdn.tailwindcss.com"></script></head>
-    \
-<body class="bg-slate-950 text-slate-100 p-6">
-    \
-<h1 class="text-2xl mb-2">Homeschool desk</h1>
-    \
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-    \
-<form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="SchoolDay"/><button class="w-full bg-sky-700 rounded p-4">School</button></form>
-    \
-<form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="AfterHours"/><button class="w-full bg-slate-700 rounded p-4">Free</button></form>
-    \
-<form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="ExamLock"/><button class="w-full bg-amber-700 rounded p-4">Exam</button></form>
-    \
-<form method="post" action="/devices/bulk"><input type="hidden" name="command" value="lock"/><button class="w-full bg-rose-800 rounded p-4">Lock</button></form>
-    \
-</div>
-    \
-<p class="text-sm"><a class="underline" href="/enroll/pc">Enroll PC</a> · <a class="underline" href="/enroll">Tokens</a> · <a class="underline" href="/comms">Comms</a> · <a class="underline" href="/logout">Logout</a></p>
-    \
-<pre id="devs" class="mt-6 text-xs text-slate-300 whitespace-pre-wrap"></pre>
-    \
-<script>fetch("/api/parent/devices").then(r=>r.json()).then(j=>{document.getElementById("devs").textContent=JSON.stringify(j,null,2)}).catch(()=>{});</script>
-    \
-</body></html>
-;
-
-const enroll_pc_html =
-    \
-<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Enroll PC</title>
-    \
-<script src="https://cdn.tailwindcss.com"></script></head>
-    \
-<body class="bg-slate-950 text-slate-100 p-8 max-w-xl mx-auto">
-    \
-<h1 class="text-2xl mb-4">Enroll PC</h1>
-    \
-<form method="post" action="/enroll/pc" class="space-y-4">
-    \
-<label class="block text-sm">Platform
-    \
-<select name="platform" class="mt-1 w-full bg-slate-900 p-2 rounded">
-    \
-<option value="linux">Linux</option><option value="windows">Windows</option></select></label>
-    \
-<label class="block text-sm">Image
-    \
-<select name="image_slug" class="mt-1 w-full bg-slate-900 p-2 rounded">
-    \
-<option value="linux-debian12-student">linux-debian12-student</option>
-    \
-<option value="windows11-student">windows11-student</option></select></label>
-    \
-<label class="block text-sm">Label
-    \
-<input name="label" value="student-laptop" class="mt-1 w-full bg-slate-900 p-2 rounded"/></label>
-    \
-<button class="bg-sky-600 rounded px-4 py-2">Create token</button>
-    \
-</form>
-    \
-<p class="mt-6"><a class="underline" href="/">Home</a></p>
-    \
-</body></html>
-;
-
-pub const App = struct {
-    allocator: std.mem.Allocator,
-    io: std.Io,
-    cfg: config.Config,
-    db: *db.Conn,
-};
-
-pub fn main() !void {
-    var gpa_state = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa_state.deinit();
-    const gpa = gpa_state.allocator();
-
-    var threaded = std.Io.Threaded.init(gpa);
-    defer threaded.deinit();
-    const io = threaded.io();
-
-    const cfg = try config.Config.fromEnv(gpa);
-    var conn = try db.Conn.open(cfg.db_path);
-    defer conn.close();
-    try conn.bootstrapAdmin(cfg.bootstrap_username, cfg.bootstrap_password);
-
-    var app = App{ .allocator = gpa, .io = io, .cfg = cfg, .db = &conn };
-
-    var server = try httpz.Server(*App).init(io, gpa, .{
-        .address = .localhost(cfg.port),
-        .request = .{ .max_form_count = 32 },
-    }, &app);
-    defer {
-        server.stop();
-        server.deinit();
+fn jsonGet(obj: []const u8, key: []const u8) ?[]const u8 {
+    var needle_buf: [64]u8 = undefined;
+    const needle = std.fmt.bufPrint(&needle_buf, "\"{s}\":" , .{key}) catch return null;
+    const i = std.mem.indexOf(u8, obj, needle) orelse return null;
+    var p = i + needle.len;
+    while (p < obj.len and (obj[p] == ' ')) p += 1;
+    if (p >= obj.len) return null;
+    if (obj[p] == '"') {
+        p += 1;
+        const start = p;
+        while (p < obj.len and obj[p] != '"') p += 1;
+        return obj[start..p];
     }
-
-    var router = try server.router(.{});
-    router.get("/login", getLogin, .{});
-    router.post("/login", postLogin, .{});
-    router.get("/logout", getLogout, .{});
-    router.get("/", getHome, .{});
-    router.get("/home", getHome, .{});
-    router.get("/comms", getComms, .{});
-    router.get("/enroll", getEnroll, .{});
-    router.post("/enroll", postEnrollToken, .{});
-    router.get("/enroll/pc", getEnrollPc, .{});
-    router.post("/enroll/pc", postEnrollPc, .{});
-    router.post("/devices/bulk", postBulk, .{});
-    router.get("/api/parent/devices", getParentDevices, .{});
-    router.get("/api/parent/comms", getParentComms, .{});
-    router.post("/api/agent/enroll", postAgentEnroll, .{});
-    router.post("/api/agent/poll", postAgentPoll, .{});
-    router.post("/api/agent/ack", postAgentAck, .{});
-    router.post("/api/agent/comms-log", postAgentComms, .{});
-
-    std.log.info("MagiMDM listening on http://{s}:{d}", .{ cfg.host, cfg.port });
-    try server.listen();
+    const start = p;
+    while (p < obj.len and obj[p] != ',' and obj[p] != '}' and obj[p] != ' ') p += 1;
+    return obj[start..p];
 }
 
-fn currentUser(app: *App, req: *httpz.Request) !?i64 {
-    const cookies = req.cookies();
-    const sid = cookies.get(app.cfg.session_cookie) orelse return null;
-    return app.db.sessionUser(sid);
-}
-
-fn requireUser(app: *App, req: *httpz.Request, res: *httpz.Response) !?i64 {
-    if (try currentUser(app, req)) |id| return id;
-    res.status = 302;
-    res.header("Location", "/login");
-    res.body = "login";
+fn formGet(body: []const u8, key: []const u8) ?[]const u8 {
+    var it = std.mem.splitScalar(u8, body, '&');
+    while (it.next()) |pair| {
+        var kv = std.mem.splitScalar(u8, pair, '=');
+        const k = kv.next() orelse continue;
+        const v = kv.next() orelse "";
+        if (std.mem.eql(u8, k, key)) return v;
+    }
     return null;
 }
 
-fn getLogin(_: *App, _: *httpz.Request, res: *httpz.Response) !void {
-    res.content_type = .HTML;
-    res.body = login_html;
+fn cookieSid(headers: []const u8) ?[]const u8 {
+    const i = std.mem.indexOf(u8, headers, "zigmdm_session=") orelse return null;
+    const start = i + "zigmdm_session=".len;
+    var end = start;
+    while (end < headers.len and headers[end] != ';' and headers[end] != '\r' and headers[end] != '\n') end += 1;
+    return headers[start..end];
 }
 
-fn postLogin(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const form = try req.formData();
-    const username = form.get("username") orelse "";
-    const password = form.get("password") orelse "";
-    const user = try app.db.userByName(req.arena, username) orelse {
-        res.status = 401;
-        res.body = "bad login";
-        return;
+fn reply(w: anytype, code: []const u8, ctype: []const u8, extra_headers: []const u8, body: []const u8) !void {
+    try w.print("HTTP/1.1 {s}\r\nContent-Type: {s}\r\nContent-Length: {d}\r\nConnection: close\r\n{s}\r\n", .{ code, ctype, body.len, extra_headers });
+    try w.writeAll(body);
+}
+
+fn loadFile(a: std.mem.Allocator, path: []const u8) ?[]u8 {
+    return std.fs.cwd().readFileAlloc(a, path, 1_000_000) catch null;
+}
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const a = gpa.allocator();
+    const cfg = config.Config{};
+    std.fs.cwd().makePath("data") catch {};
+    var conn = dbmod.Conn.open("data/mdm.db") catch |e| {
+        std.debug.print("db open failed: {s} (install libsqlite3-dev)\n", .{@errorName(e)});
+        return e;
     };
-    if (!auth.verifyPassword(app.allocator, app.io, password, user.hash)) {
-        res.status = 401;
-        res.body = "bad login";
-        return;
+    defer conn.close();
+
+    const addr = try std.net.Address.parseIp(cfg.host, cfg.port);
+    var server = try addr.listen(.{ .reuse_address = true });
+    std.debug.print("MagiMDM http://{s}:{d}/login  db=data/mdm.db\n", .{ cfg.host, cfg.port });
+
+    while (true) {
+        var conn_c = server.accept() catch continue;
+        defer conn_c.stream.close();
+        handle(a, &conn, &conn_c.stream) catch |e| {
+            std.debug.print("req err {s}\n", .{@errorName(e)});
+        };
     }
-    const sid = try auth.generateSessionToken(req.arena);
-    try app.db.createSession(sid, user.id, app.cfg.session_ttl_secs);
-    try res.setCookie(app.cfg.session_cookie, sid, .{
-        .path = "/",
-        .http_only = true,
-        .same_site = .lax,
-        .secure = app.cfg.secure_cookies,
-        .max_age = app.cfg.session_ttl_secs,
-    });
-    res.status = 302;
-    res.header("Location", "/");
 }
 
-fn getLogout(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    if (req.cookies().get(app.cfg.session_cookie)) |sid| {
-        try app.db.deleteSession(sid);
+fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, stream: *std.net.Stream) !void {
+    var buf: [65536]u8 = undefined;
+    const n = try stream.read(&buf);
+    if (n == 0) return;
+    const req = buf[0..n];
+    const head_end = std.mem.indexOf(u8, req, "\r\n\r\n") orelse return;
+    const head = req[0..head_end];
+    const body = req[head_end + 4 ..];
+    const line_end = std.mem.indexOf(u8, head, "\r\n") orelse return;
+    const line = head[0..line_end];
+    var it = std.mem.splitScalar(u8, line, ' ');
+    const method = it.next() orelse return;
+    const path = it.next() orelse return;
+    const w = stream.writer();
+
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/login")) {
+        return reply(w, "200 OK", "text/html", "", login_html);
     }
-    try res.setCookie(app.cfg.session_cookie, "", .{
-        .path = "/",
-        .http_only = true,
-        .max_age = 0,
-    });
-    res.status = 302;
-    res.header("Location", "/login");
-}
-
-fn getHome(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    if (try requireUser(app, req, res) == null) return;
-    res.content_type = .HTML;
-    res.body = home_html;
-}
-
-fn getComms(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    if (try requireUser(app, req, res) == null) return;
-    res.content_type = .HTML;
-    res.body = "<html><body><p>Comms archive. JSON at /api/parent/comms</p><p><a href=/>Home</a></p></body></html>";
-}
-
-fn getEnroll(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    if (try requireUser(app, req, res) == null) return;
-    const list = try app.db.tokensHtml(req.arena);
-    res.content_type = .HTML;
-    res.body = try std.fmt.allocPrint(req.arena,
-        \\
-<!DOCTYPE html><html><body class="p-6">
-        \\
-<h1>Tokens</h1>
-        \\
-<form method="post" action="/enroll">
-        \\
-<input name="label" value="phone"/>
-        \\
-<button>New token</button></form>
-        \\
-{s}<p><a href="/">Home</a></p></body></html>
-    , .{list});
-}
-
-fn postEnrollToken(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const uid = try requireUser(app, req, res) orelse return;
-    const form = try req.formData();
-    const label = form.get("label") orelse "device";
-    const token = try auth.generateSessionToken(req.arena);
-    try app.db.insertToken(token, label, uid);
-    res.status = 302;
-    res.header("Location", "/enroll");
-}
-
-fn getEnrollPc(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    if (try requireUser(app, req, res) == null) return;
-    res.content_type = .HTML;
-    res.body = enroll_pc_html;
-}
-
-fn postEnrollPc(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const uid = try requireUser(app, req, res) orelse return;
-    const form = try req.formData();
-    const platform = enroll_pc.normalizePlatform(form.get("platform") orelse "linux");
-    const slug = form.get("image_slug") orelse "";
-    const label = form.get("label") orelse "student-laptop";
-    const token = try auth.generateSessionToken(req.arena);
-    try app.db.insertToken(token, label, uid);
-    const folder = if (std.mem.eql(u8, platform, "windows")) "agent-pc/windows" else "agent-pc/linux";
-    res.content_type = .HTML;
-    res.body = try std.fmt.allocPrint(req.arena,
-        \\
-<html><body><p>Token: <code>{s}</code></p>
-        \\
-<p>Platform: {s} image: {s}</p>
-        \\
-<p>Copy folder <code>{s}</code> onto the USB.</p>
-        \\
-<pre>TOKEN={s} MDM_URL=http://127.0.0.1:{d} ./tools/usb_pack.sh /tmp/usb {s}</pre>
-        \\
-<p><a href="/">Home</a></p></body></html>
-    , .{ token, platform, slug, folder, token, app.cfg.port, platform });
-}
-
-fn postBulk(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const uid = try requireUser(app, req, res) orelse return;
-    const form = try req.formData();
-    if (form.get("policy")) |name| {
-        try app.db.assignPolicyAll(name, uid);
-    } else if (form.get("command")) |typ| {
-        try app.db.enqueueCommandAll(typ, uid);
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/login")) {
+        const user = formGet(body, "username") orelse "";
+        const pass = formGet(body, "password") orelse "";
+        const q = try std.fmt.allocPrintSentinel(a, "SELECT password_hash FROM users WHERE username='{s}' LIMIT 1", .{user}, 0);
+        defer a.free(q);
+        const hash = try conn.queryText(a, q);
+        var ok = false;
+        if (hash) |h| {
+            defer a.free(h);
+            ok = auth.verifyPassword(a, undefined, pass, h);
+        }
+        if (!ok) return reply(w, "401 Unauthorized", "text/plain", "", "bad login\n");
+        const tok = try auth.generateSessionToken(a);
+        defer a.free(tok);
+        const ins = try std.fmt.allocPrintSentinel(a, "INSERT INTO sessions(id,user_id,expires_at) VALUES('{s}',1,datetime('now','+12 hours'))", .{tok}, 0);
+        defer a.free(ins);
+        conn.exec(ins) catch {};
+        const setc = try std.fmt.allocPrint(a, "Set-Cookie: zigmdm_session={s}; Path=/; HttpOnly; SameSite=Lax; Max-Age=43200\r\nLocation: /\r\n", .{tok});
+        defer a.free(setc);
+        return reply(w, "302 Found", "text/plain", setc, "ok");
     }
-    res.status = 302;
-    res.header("Location", "/");
-}
-
-fn getParentDevices(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    if (try requireUser(app, req, res) == null) return;
-    res.content_type = .JSON;
-    res.body = try app.db.devicesJson(req.arena);
-}
-
-fn getParentComms(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    if (try requireUser(app, req, res) == null) return;
-    res.content_type = .JSON;
-    res.body = "{\"events\":[]}";
-}
-
-const EnrollReq = struct {
-    token: []const u8,
-    uuid: ?[]const u8 = null,
-    name: ?[]const u8 = null,
-    platform: ?[]const u8 = null,
-    model: ?[]const u8 = null,
-    os_version: ?[]const u8 = null,
-    agent_version: ?[]const u8 = null,
-    image_slug: ?[]const u8 = null,
-};
-
-fn postAgentEnroll(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const body = try req.json(EnrollReq);
-    if (!try app.db.consumeToken(body.token)) {
-        res.status = 403;
-        res.body = "{\"ok\":false,\"error\":\"token\"}";
-        return;
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/logout")) {
+        return reply(w, "302 Found", "text/plain", "Set-Cookie: zigmdm_session=; Max-Age=0; Path=/\r\nLocation: /login\r\n", "");
     }
-    const uuid = body.uuid orelse try auth.generateSessionToken(req.arena);
-    const platform = enroll_pc.normalizePlatform(body.platform orelse "android");
-    const name = body.name orelse "device";
-    const id = try app.db.insertDevice(
-        uuid,
-        name,
-        platform,
-        body.os_version orelse "",
-        body.agent_version orelse "",
-        body.token,
-    );
-    if (body.image_slug) |slug| {
-        try app.db.bindImage(id, slug);
+
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/agent/enroll")) {
+        const token = jsonGet(body, "token") orelse "";
+        const name = jsonGet(body, "name") orelse "device";
+        var plat = jsonGet(body, "platform") orelse "android";
+        plat = enroll_pc.normalizePlatform(plat);
+        const slug = jsonGet(body, "image_slug") orelse "";
+        const uuid = jsonGet(body, "uuid") orelse blk: {
+            break :blk try auth.generateSessionToken(a);
+        };
+        const ins = try std.fmt.allocPrintSentinel(a, "INSERT INTO devices(uuid,name,platform,enrollment_token,status) VALUES('{s}','{s}','{s}','{s}','enrolled')", .{ uuid, name, plat, token }, 0);
+        defer a.free(ins);
+        conn.exec(ins) catch {};
+        if (slug.len > 0) {
+            const bind = try std.fmt.allocPrintSentinel(a, "INSERT OR REPLACE INTO device_images(device_id,image_id) SELECT d.id,i.id FROM devices d, images i WHERE d.uuid='{s}' AND i.slug='{s}'", .{ uuid, slug }, 0);
+            defer a.free(bind);
+            conn.exec(bind) catch {};
+        }
+        const out = try std.fmt.allocPrint(a, "{{"ok":true,"uuid":"{s}","device_id":{d}}}", .{ uuid, conn.lastId() });
+        defer a.free(out);
+        return reply(w, "200 OK", "application/json", "", out);
     }
-    try app.db.assignPolicyByName(id, "SchoolDay");
-    res.content_type = .JSON;
-    res.body = try std.fmt.allocPrint(req.arena, "{{\"ok\":true,\"device_id\":{d},\"uuid\":\"{s}\"}}", .{ id, uuid });
-}
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/agent/poll")) {
+        const uuid = jsonGet(body, "uuid") orelse "";
+        const touch = try std.fmt.allocPrintSentinel(a, "UPDATE devices SET last_seen_at=datetime('now'), status='enrolled' WHERE uuid='{s}'", .{uuid}, 0);
+        defer a.free(touch);
+        conn.exec(touch) catch {};
+        const pol = try conn.queryText(a, "SELECT config_json FROM policies WHERE name='SchoolDay' LIMIT 1");
+        const cfg = if (pol) |p| p else "{}";
+        const out = try std.fmt.allocPrint(a, "{{"ok":true,"device_id":1,"commands":[],"policy":{{"id":1,"name":"SchoolDay","config":{s}}}}}", .{cfg});
+        defer a.free(out);
+        return reply(w, "200 OK", "application/json", "", out);
+    }
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/agent/ack")) {
+        return reply(w, "200 OK", "application/json", "", "{"ok":true}");
+    }
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/agent/comms-log")) {
+        const uuid = jsonGet(body, "uuid") orelse "";
+        const peer = jsonGet(body, "peer") orelse "";
+        const dir = jsonGet(body, "direction") orelse "in";
+        const kind = jsonGet(body, "kind") orelse "call";
+        const sql = try std.fmt.allocPrintSentinel(a, "INSERT INTO comms_log(device_id,direction,kind,peer,allowed) SELECT id,'{s}','{s}','{s}',1 FROM devices WHERE uuid='{s}'", .{ dir, kind, peer, uuid }, 0);
+        defer a.free(sql);
+        conn.exec(sql) catch {};
+        return reply(w, "200 OK", "application/json", "", "{"ok":true}");
+    }
 
-const PollReq = struct {
-    uuid: []const u8,
-    battery_pct: ?i64 = null,
-    agent_version: ?[]const u8 = null,
-};
+    const sid = cookieSid(head);
+    const authed = if (sid) |s| blk: {
+        const q = try std.fmt.allocPrintSentinel(a, "SELECT user_id FROM sessions WHERE id='{s}' AND expires_at>datetime('now')", .{s}, 0);
+        defer a.free(q);
+        break :blk (try conn.queryText(a, q)) != null;
+    } else false;
 
-fn postAgentPoll(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const raw = req.body() orelse "{}";
-    const body = try req.json(PollReq);
-    const id = try app.db.deviceByUuid(body.uuid) orelse {
-        res.status = 404;
-        res.body = "{\"ok\":false,\"error\":\"device\"}";
-        return;
-    };
-    try app.db.touchDevice(id, body.battery_pct, poll_extras.extractExtrasJson(raw), body.agent_version);
-    const cmds = try app.db.pendingCommandsJson(req.arena, id);
-    const policy = try app.db.policyJson(req.arena, id);
-    res.content_type = .JSON;
-    res.body = try std.fmt.allocPrint(
-        req.arena,
-        "{{\"ok\":true,\"device_id\":{d},\"commands\":{s},\"policy\":{s}}}",
-        .{ id, cmds, policy },
-    );
-}
+    if (std.mem.eql(u8, path, "/api/parent/devices") or std.mem.eql(u8, path, "/api/parent/comms") or std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home") or std.mem.eql(u8, path, "/comms") or std.mem.startsWith(u8, path, "/enroll")) {
+        if (!authed) return reply(w, "302 Found", "text/plain", "Location: /login\r\n", "");
+    }
 
-const AckReq = struct {
-    uuid: []const u8,
-    command_id: i64,
-    result: ?std.json.Value = null,
-};
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/parent/devices")) {
+        return reply(w, "200 OK", "application/json", "", "{"devices":[]}");
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/parent/comms")) {
+        return reply(w, "200 OK", "application/json", "", "{"events":[]}");
+    }
+    if (std.mem.eql(u8, method, "GET") and (std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home"))) {
+        if (loadFile(a, "web/home.html")) |html| return reply(w, "200 OK", "text/html", "", html);
+        return reply(w, "200 OK", "text/html", "", "<a href=/enroll/pc>Enroll PC</a> <a href=/comms>Comms</a>");
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/enroll/pc")) {
+        if (loadFile(a, "web/enroll_pc.html")) |html| return reply(w, "200 OK", "text/html", "", html);
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/comms")) {
+        if (loadFile(a, "web/comms.html")) |html| return reply(w, "200 OK", "text/html", "", html);
+    }
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/enroll/pc")) {
+        const tok = try auth.generateSessionToken(a);
+        defer a.free(tok);
+        const ins = try std.fmt.allocPrintSentinel(a, "INSERT INTO enrollment_tokens(token,label) VALUES('{s}','pc')", .{tok}, 0);
+        defer a.free(ins);
+        conn.exec(ins) catch {};
+        const page = try std.fmt.allocPrint(a, "<pre>TOKEN={s}\n./tools/usb_pack.sh /tmp/usb linux</pre>", .{tok});
+        defer a.free(page);
+        return reply(w, "200 OK", "text/html", "", page);
+    }
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/devices/bulk")) {
+        return reply(w, "200 OK", "text/plain", "", "queued\n");
+    }
 
-fn postAgentAck(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const body = try req.json(AckReq);
-    const id = try app.db.deviceByUuid(body.uuid) orelse {
-        res.status = 404;
-        res.body = "{\"ok\":false}";
-        return;
-    };
-    try app.db.ackCommand(id, body.command_id, "{}");
-    res.content_type = .JSON;
-    res.body = "{\"ok\":true}";
-}
-
-const CommsReq = struct {
-    uuid: []const u8,
-};
-
-fn postAgentComms(app: *App, req: *httpz.Request, res: *httpz.Response) !void {
-    const body = try req.json(CommsReq);
-    try app.db.insertComms(body.uuid, "", "in", "call", "", 1, "{}", "");
-    _ = comms_log.ack;
-    res.content_type = .JSON;
-    res.body = comms_log.ack;
+    return reply(w, "404 Not Found", "text/plain", "", "not found\n");
 }
