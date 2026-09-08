@@ -1,0 +1,5 @@
+polkit.addRule(function(action, subject) {
+    if (subject.user == "student" && action.id.indexOf("org.freedesktop.systemd1") == 0) {
+        return polkit.Result.NO;
+    }
+});

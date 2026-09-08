@@ -1,0 +1,9 @@
+{
+  "policies": {
+    "BlockAboutConfig": true,
+    "DisableFirefoxAccounts": true,
+    "DontCheckDefaultBrowser": true,
+    "Homepage": { "URL": "https://mdm.home", "Locked": true },
+    "Proxy": { "Mode": "none" }
+  }
+}

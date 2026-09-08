@@ -1,77 +1,37 @@
-# MagiMDM (ZigMDM)
+# MagiMDM
 
-**Repository:** https://github.com/5mil/MagiMDM
+Self-hosted MDM for a small homeschool fleet (phones + student PCs).
 
-Self-hosted **Mobile Device Management** for a small fleet (about 1–10 devices).
+**Repo:** https://github.com/5mil/MagiMDM
 
-Built in **Zig** for a small binary, low memory use, and fully local control — no cloud IdP, no mandatory external services.
+## Docs
 
----
+| Doc | What |
+|-----|------|
+| [docs/RUNBOOK.md](./docs/RUNBOOK.md) | Parent day-to-day |
+| [docs/PC_ENROLL.md](./docs/PC_ENROLL.md) | Blank-disk Linux/Windows enroll |
+| [docs/SCHOOL_YEAR.md](./docs/SCHOOL_YEAR.md) | What landed vs hardware |
+| [docs/DEPLOY.md](./docs/DEPLOY.md) | TLS / proxy |
+| [docs/POLL.md](./docs/POLL.md) | Agent extras |
 
-## Documentation index
+## Console (when main.zig is wired)
 
-| Document | Description |
-|----------|-------------|
-| [README.md](./README.md) | This file — overview, quick start, API |
-| [docs/DEPLOY.md](./docs/DEPLOY.md) | TLS, reverse proxy (Caddy/nginx), systemd, backups |
-| [agent/README.md](./agent/README.md) | Android Kotlin agent (enroll, poll, WorkManager) |
-| [tools/README.md](./tools/README.md) | Python mock agent usage |
-
-### Console URLs (default local server)
-
-| Link | Purpose |
+| Path | Purpose |
 |------|---------|
-| http://127.0.0.1:8787/login | Sign in |
-| http://127.0.0.1:8787/ | Devices |
-| http://127.0.0.1:8787/enroll | Enrollment tokens |
-| http://127.0.0.1:8787/policies | Policies |
-| http://127.0.0.1:8787/packages | APK / package registry |
-| http://127.0.0.1:8787/audit | Audit log |
-| http://127.0.0.1:8787/devices/1 | Device detail (policy + deploy) |
+| /login | Parent only |
+| / or /home | School / Free / Exam / Lock |
+| /enroll/pc | PC token + USB notes |
+| /policies | SchoolDay and siblings |
+| /audit | Trail |
 
-### Upstream libraries
-
-| Library | Repository |
-|---------|------------|
-| Zig | https://ziglang.org/download/ |
-| Zig 0.16.0 (Linux x86_64) | https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz |
-| http.zig | https://github.com/karlseguin/http.zig |
-| zqlite | https://github.com/karlseguin/zqlite.zig |
-
----
-
-## Features
-
-| Area | Status |
-|------|--------|
-| Single binary + SQLite | Done |
-| Local username/password (**argon2id**) | Done |
-| Web console (HTMX + Tailwind) | Done |
-| Enrollment tokens | Done |
-| Remote commands (lock / reboot / wipe queue) | Done |
-| Agent API (enroll / poll / ack) | Done |
-| Policies pushed on poll | Done |
-| Per-device policy assignment UI | Done |
-| Audit log UI | Done |
-| APK deploy command (`deploy_apk`) | Done |
-| Python mock agent | Done |
-| Android Kotlin agent + **WorkManager** | Done |
-| TLS / reverse-proxy guide | Done — [docs/DEPLOY.md](./docs/DEPLOY.md) |
-
----
-
-## Quick start
+Default `admin` / `changeme` — change immediately.
 
 ```bash
-# Vendor deps (not committed — clone locally):
-git clone --depth 1 https://github.com/karlseguin/zqlite.zig.git vendor/zqlite
-git clone --depth 1 https://github.com/karlseguin/http.zig.git vendor/httpz
-
-# Zig 0.16.0 required
+git clone https://github.com/5mil/MagiMDM
+# vendor zqlite + http.zig as in prior README
 zig build
 ./zig-out/bin/zig-mdm
+TOKEN=dev MDM_URL=http://127.0.0.1:8788 python3 tools/mock_pc_agent.py
 ```
 
-Open **http://127.0.0.1:8787/login** — default `admin` / `changeme`.
-
-See full README sections in the repository for Agent API, layout, and security notes.
+Student templates keep `mining.enabled: false`.

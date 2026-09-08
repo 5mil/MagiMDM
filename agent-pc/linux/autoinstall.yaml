@@ -1,0 +1,16 @@
+# Ubuntu autoinstall sketch. Copy to installer user-data.
+# Debian preseed is the sibling path.
+autoinstall:
+  version: 1
+  identity:
+    hostname: student-pc
+    username: parent
+    password: CHANGE_ME_HASH
+  late-commands:
+    - mkdir -p /target/etc/zigmdm /target/usr/local/sbin
+    - cp /cdrom/zigmdm/enroll.env /target/etc/zigmdm/enroll.env
+    - cp /cdrom/zigmdm/zigmdm-agent.sh /target/usr/local/sbin/zigmdm-agent.sh
+    - chmod +x /target/usr/local/sbin/zigmdm-agent.sh
+    - cp /cdrom/zigmdm/zigmdm-agent.service /target/etc/systemd/system/
+    - curtin in-target -- systemctl enable zigmdm-agent.service
+    - curtin in-target -- useradd -m -s /bin/bash student || true
