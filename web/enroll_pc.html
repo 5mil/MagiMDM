@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Enroll PC — MagiMDM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 p-8 max-w-xl mx-auto">
+<h1 class="text-2xl font-semibold mb-4">Enroll PC</h1>
+<p class="text-slate-400 text-sm mb-6">Blank-slate USB pack. Token is single-use unless you raise max_uses.</p>
+<form method="post" action="/enroll/pc" class="space-y-4">
+  <label class="block text-sm">Platform
+    <select name="platform" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-2">
+      <option value="linux">Linux (Debian 12)</option>
+      <option value="windows">Windows 11</option>
+    </select>
+  </label>
+  <label class="block text-sm">Image
+    <select name="image_slug" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-2">
+      <option value="linux-debian12-student">linux-debian12-student</option>
+      <option value="windows11-student">windows11-student</option>
+    </select>
+  </label>
+  <label class="block text-sm">Label
+    <input name="label" value="student-laptop" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-2"/>
+  </label>
+  <button class="bg-sky-600 hover:bg-sky-500 rounded px-4 py-2">Create token + USB notes</button>
+</form>
+<p class="mt-8 text-xs text-slate-500">POST /enroll/pc should insert enrollment_tokens, return token and point at agent-pc/windows or agent-pc/linux. Zip pack is the following slice.</p>
+</body>
+</html>

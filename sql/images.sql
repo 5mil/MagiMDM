@@ -17,3 +17,9 @@ CREATE TABLE IF NOT EXISTS device_images (
     applied_at TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (device_id)
 );
+
+INSERT OR IGNORE INTO images (slug, label, os, seed_json) VALUES
+('linux-debian12-student', 'Debian 12 student', 'linux',
+ '{"hostname_prefix":"student","student_user":"student","admin_user":"parent","packages":["firefox-esr","libreoffice"]}'),
+('windows11-student', 'Windows 11 student', 'windows',
+ '{"hostname_prefix":"STUDENT","student_user":"student","admin_user":"parent"}');
