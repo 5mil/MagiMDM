@@ -1,63 +1,82 @@
 # PC enrollment — blank disk to student laptop
 
-Homeschool path: parent starts with empty storage, MagiMDM builds the machine during enroll.
+Parent starts with empty storage. MagiMDM builds the machine during enroll.
 
-## Flow
+## Shared flow (Linux + Windows)
 
-1. Parent creates an enrollment token bound to policy `SchoolDay` (or AfterHours).
-2. Parent picks an **image** (`linux-debian12-student` first).
-3. Laptop boots installer media (USB now; PXE later) that only talks to this console.
-4. Installer wipes the target disk, lays down OS, copies `agent-pc`, writes `/etc/zigmdm/enroll.env` (`MDM_URL`, `TOKEN`).
-5. First boot: agent enrolls (`platform=linux`), pulls policy, acks `applyImage` if queued.
-6. Device status `pending` → `enrolled`. Audit: `image.apply`, `device.enroll`.
+1. Parent creates enrollment token + assigns policy (`SchoolDay`).
+2. Parent picks an **image** slug.
+3. USB installer (PXE later) wipes the target disk and lays down that OS.
+4. Image writes enroll config + starts the PC agent.
+5. Agent `POST /api/agent/enroll` then poll/ack like Android.
+6. Status `pending` → `enrolled`. Audit `image.apply`, `device.enroll`.
 
-Blank slate means **installer owns the disk**. Do not dual-boot leftover student OS.
+Installer owns the disk. No leftover student OS.
 
-## Same APIs as phones
+## API
 
-| Step | Endpoint |
-|------|----------|
-| Enroll | `POST /api/agent/enroll` `{ token, name, platform, model, os_version }` |
-| Poll | `POST /api/agent/poll` `{ uuid, agent_version, extras }` |
-| Ack | existing command ack |
-
-`devices.platform` = `linux` | `windows` | `android`.
-
-## Image record
-
-`images` table: id, slug, os, arch, source_path (on MDM host / SAS), sha256, seed_json.
-
-`seed_json` example:
-
-```json
+```
+POST /api/agent/enroll
 {
-  "hostname_prefix": "student",
-  "packages": ["firefox-esr", "libreoffice"],
-  "block_packages": [],
-  "agent_unit": "zigmdm-agent.service",
-  "student_user": "student",
-  "admin_user": "parent"
+  "token": "…",
+  "name": "hostname",
+  "platform": "linux" | "windows",
+  "model": "optional",
+  "os_version": "Debian 12" | "Windows 11",
+  "agent_version": "0.1.0-linux" | "0.1.0-windows",
+  "image_slug": "linux-debian12-student" | "windows11-student"
 }
+
+POST /api/agent/poll   { uuid, agent_version, extras }
+POST /api/agent/ack    existing command ack
 ```
 
-Packages files can live next to APKs on the SAS volume.
+`devices.platform` must be stored as sent. `image_slug` → `device_images`.
+
+## Images
+
+| slug | OS |
+|------|----|
+| `linux-debian12-student` | Debian 12 + agent unit |
+| `windows11-student` | Win11 Pro + agent service |
+
+`seed_json` holds hostname prefix, packages/apps, `student_user`, `admin_user`.
 
 ## Commands
 
 | type | payload |
 |------|---------|
-| `applyImage` | `{ "slug": "linux-debian12-student" }` |
-| `reimage` | same; agent schedules reboot into installer |
-| `applyPolicy` | existing JSON |
+| `applyImage` | `{ "slug": "…" }` |
+| `reimage` | parent-only; reboot into installer |
+| `applyPolicy` | policy JSON |
 
-Reimage is parent-only. Student user cannot disable the unit.
+Student account cannot stop the agent service.
 
-## Linux first cut (this repo)
+## Linux
 
-- `agent-pc/linux/` — enroll + poll loop + systemd unit
-- Installer hook later: Debian preseed / autoinstall that calls the same enroll env
-- Windows image is a second milestone (Autopilot-like USB + Win32 service)
+`agent-pc/linux/` — `enroll.env`, systemd unit, poll loop.
+Installer: Debian preseed/autoinstall writes `/etc/zigmdm/enroll.env`.
 
-## Parent console (to add)
+## Windows
 
-Devices list: platform badge. Action: **Enroll PC** → token + image + download USB script.
+`agent-pc/windows/` — `enroll.ps1` + `ZigMdmAgent` scheduled task / service.
+
+USB layout:
+
+```
+USB\
+  Autounattend.xml      # wipe + install Win11 Pro
+  zigmdm\
+    enroll.ps1
+    enroll.env.example  # MDM_URL, TOKEN, IMAGE_SLUG
+```
+
+`Autounattend.xml` FirstLogonCommands runs `enroll.ps1` as SYSTEM.
+Script enrolls, writes `C:\ProgramData\ZigMDM\device.env`, registers a 60s poll task.
+Policy apply on Windows (AppLocker, firewall, school hours) is the slice after enroll works.
+
+OOBE must skip consumer Microsoft account. Local `parent` (admin) + `student` (standard).
+
+## Console (next UI)
+
+**Enroll PC** → platform Linux|Windows → image → token → download USB pack.
