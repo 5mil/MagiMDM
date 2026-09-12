@@ -1,0 +1,19 @@
+# MagiMDM + Open edX front door. Copy to /etc/caddy/Caddyfile
+# Replace hosts and point LAN/Tailscale DNS here.
+# Keep zig-mdm and Docker ports on localhost only.
+
+mdm.home {
+	encode gzip
+	reverse_proxy 127.0.0.1:8787
+}
+
+learn.home {
+	encode gzip
+	# Tutor LMS host — adjust published port after `tutor local launch`
+	reverse_proxy 127.0.0.1:80
+}
+
+studio.home {
+	encode gzip
+	reverse_proxy 127.0.0.1:80
+}
