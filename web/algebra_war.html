@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Algebra War — mid lane</title>
+<style>
+  :root { --bg:#0b1220; --lane:#1a2333; --ink:#e8eef8; --gold:#e6b84f; --bad:#c45c5c; --ok:#3d9b6e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Georgia, serif; background:var(--bg); color:var(--ink); }
+  header { padding:12px 16px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header a { color:#9ec1ff; }
+  #lane { position:relative; height:220px; margin:0 16px; background:linear-gradient(#243044,#1a2333); border-radius:8px; overflow:hidden; }
+  #road { position:absolute; left:0; right:0; top:90px; height:40px; background:#2c3a4f; }
+  .creep { position:absolute; top:70px; width:88px; text-align:center; font-size:13px; }
+  .creep b { display:block; background:#3a4a63; padding:6px 4px; border-radius:6px; }
+  .creep.low b { background:#6b3a3a; }
+  #tower { position:absolute; right:12px; top:40px; width:70px; text-align:center; }
+  #tower .hp { background:#5a3a2a; height:80px; border-radius:6px; }
+  #hero { position:absolute; left:16px; top:78px; width:56px; text-align:center; font-size:12px; }
+  form { padding:16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  input[type=text] { font-size:20px; width:120px; padding:8px; }
+  button { padding:8px 14px; cursor:pointer; }
+  #log { padding:0 16px 16px; font-size:14px; color:#a9b6c8; min-height:3em; }
+  .gold { color:var(--gold); }
+</style>
+</head>
+<body>
+<header>
+  <strong>Algebra War</strong>
+  <span>mode: Dota lane</span>
+  <span class="gold">gold <span id="gold">0</span></span>
+  <span>last-hits <span id="lh">0</span></span>
+  <span>tower <span id="th">5</span></span>
+  <label>band
+    <select id="band">
+      <option value="1">1 — one-step</option>
+      <option value="2" selected>2 — two-step</option>
+      <option value="3">3 — both sides</option>
+    </select>
+  </label>
+  <a href="/">home</a>
+  <a href="/lms">courses</a>
+</header>
+<div id="lane">
+  <div id="road"></div>
+  <div id="hero">hero</div>
+  <div id="tower"><div class="hp"></div>tower</div>
+</div>
+<form id="f">
+  <span id="prompt">—</span>
+  <label>x = <input id="ans" type="text" autocomplete="off" inputmode="numeric"/></label>
+  <button type="submit">last-hit</button>
+  <button type="button" id="skip">miss</button>
+</form>
+<p id="log">Creeps walk mid. When the prompt is live, solve for x to last-hit. Five last-hits drop the tower.</p>
+<script>
+const rnd = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+function makeProblem(band) {
+  band = +band;
+  if (band <= 1) {
+    const a = rnd(2,9), x = rnd(-6,9), b = a*x;
+    return { text: a + "x = " + b, x };
+  }
+  if (band === 2) {
+    const a = rnd(2,6), x = rnd(-5,8), c = rnd(-8,8), b = a*x + c;
+    const sign = c >= 0 ? "+" : "−";
+    const cc = Math.abs(c);
+    return { text: a + "x " + sign + " " + cc + " = " + b, x };
+  }
+  const a = rnd(2,5), d = rnd(1,4), x = rnd(-4,7), c = rnd(-5,5);
+  const b = (a-d)*x + c;
+  const sign = c >= 0 ? "+" : "−";
+  return { text: a + "x = " + d + "x " + sign + " " + Math.abs(c) + (b===0?"":" → check"), x, extra:b };
+}
+// band 3: ax = dx + c  => (a-d)x = c
+function makeBothSides() {
+  const a = rnd(3,7), d = rnd(1, a-1), x = rnd(-5,8), c = (a-d)*x;
+  const sign = c >= 0 ? "+" : "−";
+  return { text: a + "x = " + d + "x " + sign + " " + Math.abs(c), x };
+}
+let gold=0, lh=0, tower=5, cur=null, creepEl=null;
+const lane = document.getElementById("lane");
+function spawn() {
+  const band = document.getElementById("band").value;
+  cur = band==="3" ? makeBothSides() : makeProblem(band);
+  document.getElementById("prompt").textContent = cur.text;
+  if (creepEl) creepEl.remove();
+  creepEl = document.createElement("div");
+  creepEl.className = "creep";
+  creepEl.innerHTML = "<b>" + cur.text + "</b>creep";
+  creepEl.style.left = "80px";
+  lane.appendChild(creepEl);
+  let x = 80;
+  const t = setInterval(() => {
+    x += 3;
+    creepEl.style.left = x + "px";
+    if (x > 420) creepEl.classList.add("low");
+    if (x > 560) {
+      clearInterval(t);
+      miss("creep reached tower");
+    }
+    creepEl._timer = t;
+  }, 40);
+}
+function miss(why) {
+  if (creepEl && creepEl._timer) clearInterval(creepEl._timer);
+  document.getElementById("log").textContent = "Miss — " + why + ". Gold " + gold;
+  if (creepEl) creepEl.remove();
+  cur = null;
+  setTimeout(spawn, 600);
+}
+function hit() {
+  gold += 10; lh += 1; tower -= 1;
+  document.getElementById("gold").textContent = gold;
+  document.getElementById("lh").textContent = lh;
+  document.getElementById("th").textContent = Math.max(tower,0);
+  if (creepEl && creepEl._timer) clearInterval(creepEl._timer);
+  if (creepEl) creepEl.remove();
+  if (tower <= 0) {
+    document.getElementById("log").textContent = "Tower down. " + lh + " last-hits, " + gold + " gold. Attach this session to ALG1-WAR.";
+    cur = null;
+    return;
+  }
+  document.getElementById("log").textContent = "Last-hit. x = " + cur.x;
+  cur = null;
+  setTimeout(spawn, 500);
+}
+document.getElementById("f").onsubmit = (e) => {
+  e.preventDefault();
+  if (!cur) return;
+  const v = document.getElementById("ans").value.trim();
+  document.getElementById("ans").value = "";
+  if (v === String(cur.x)) hit();
+  else miss("wrong x (wanted " + cur.x + ")");
+};
+document.getElementById("skip").onclick = () => miss("skipped");
+spawn();
+</script>
+</body>
+</html>
