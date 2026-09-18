@@ -4,6 +4,7 @@ const dbmod = @import("db.zig");
 const auth = @import("auth.zig");
 const enroll_pc = @import("enroll_pc.zig");
 const config = @import("config.zig");
+const algebra = @import("algebra.zig");
 
 const login_html =
     \\<!DOCTYPE html><html><body style="font-family:sans-serif;background:#020617;color:#e2e8f0;padding:2rem">
@@ -181,9 +182,8 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, stream: *std.net.Stream) !voi
         break :blk (try conn.queryText(a, q)) != null;
     } else false;
 
-    if (std.mem.eql(u8, path, "/api/parent/devices") or std.mem.eql(u8, path, "/api/parent/comms") or std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home") or std.mem.eql(u8, path, "/comms") or std.mem.startsWith(u8, path, "/enroll")) {
-        if (!authed) return reply(w, "302 Found", "text/plain", "Location: /login\r\n", "");
-    }
+    const gated = std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home") or std.mem.eql(u8, path, "/comms") or std.mem.eql(u8, path, "/school") or std.mem.eql(u8, path, "/lms") or std.mem.eql(u8, path, "/algebra-war") or std.mem.startsWith(u8, path, "/enroll") or std.mem.startsWith(u8, path, "/api/parent") or std.mem.startsWith(u8, path, "/api/game") or std.mem.startsWith(u8, path, "/api/school") or std.mem.startsWith(u8, path, "/api/lms");
+    if (gated and !authed) return reply(w, "302 Found", "text/plain", "Location: /login\r\n", "");
 
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/parent/devices")) {
         return reply(w, "200 OK", "application/json", "", "{"devices":[]}");
@@ -191,15 +191,88 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, stream: *std.net.Stream) !voi
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/parent/comms")) {
         return reply(w, "200 OK", "application/json", "", "{"events":[]}");
     }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/school/year")) {
+        return reply(w, "200 OK", "application/json", "", "{"year":"2026-27"}");
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/lms/courses")) {
+        return reply(w, "200 OK", "application/json", "", "{"courses":[{"code":"ALG1-WAR"}]}");
+    }
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/game/session")) {
+        const band_s = jsonGet(body, "band") orelse "2";
+        const band: u8 = std.fmt.parseInt(u8, band_s, 10) catch 2;
+        var p = try algebra.makeProblem(a, band);
+        defer a.free(p.prompt);
+        const ins = try std.fmt.allocPrintSentinel(a, "INSERT INTO game_sessions(band,current_x,current_prompt) VALUES({d},{d},'{s}')", .{ band, p.x, p.prompt }, 0);
+        defer a.free(ins);
+        conn.exec(ins) catch {};
+        const id = conn.lastId();
+        const out = try std.fmt.allocPrint(a, "{{"ok":true,"id":{d},"prompt":"{s}","gold":0,"last_hits":0,"tower":5}}", .{ id, p.prompt });
+        defer a.free(out);
+        return reply(w, "200 OK", "application/json", "", out);
+    }
+    if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/game/move")) {
+        const sid_s = jsonGet(body, "id") orelse "0";
+        const ans = jsonGet(body, "answer") orelse "";
+        const q = try std.fmt.allocPrintSentinel(a, "SELECT current_x FROM game_sessions WHERE id={s}", .{sid_s}, 0);
+        defer a.free(q);
+        const xs = try conn.queryText(a, q);
+        const expected: i32 = if (xs) |s| std.fmt.parseInt(i32, s, 10) catch 0 else 0;
+        if (xs) |s| a.free(s);
+        const ok = algebra.judgeSolve(expected, ans);
+        const ev = try std.fmt.allocPrintSentinel(a, "INSERT INTO game_events(session_id,kind,answer,correct) VALUES({s},'solve','{s}',{d})", .{ sid_s, ans, @as(u8, if (ok) 1 else 0) }, 0);
+        defer a.free(ev);
+        conn.exec(ev) catch {};
+        if (ok) {
+            const up = try std.fmt.allocPrintSentinel(a, "UPDATE game_sessions SET gold=gold+10, last_hits=last_hits+1 WHERE id={s}", .{sid_s}, 0);
+            defer a.free(up);
+            conn.exec(up) catch {};
+        } else {
+            const up = try std.fmt.allocPrintSentinel(a, "UPDATE game_sessions SET misses=misses+1 WHERE id={s}", .{sid_s}, 0);
+            defer a.free(up);
+            conn.exec(up) catch {};
+        }
+        const band_q = try std.fmt.allocPrintSentinel(a, "SELECT band FROM game_sessions WHERE id={s}", .{sid_s}, 0);
+        defer a.free(band_q);
+        const bs = try conn.queryText(a, band_q);
+        const band: u8 = if (bs) |s| std.fmt.parseInt(u8, s, 10) catch 2 else 2;
+        if (bs) |s| a.free(s);
+        var nxt = try algebra.makeProblem(a, band);
+        defer a.free(nxt.prompt);
+        const setp = try std.fmt.allocPrintSentinel(a, "UPDATE game_sessions SET current_x={d}, current_prompt='{s}' WHERE id={s}", .{ nxt.x, nxt.prompt, sid_s }, 0);
+        defer a.free(setp);
+        conn.exec(setp) catch {};
+        const gold_q = try std.fmt.allocPrintSentinel(a, "SELECT gold FROM game_sessions WHERE id={s}", .{sid_s}, 0);
+        defer a.free(gold_q);
+        const gs = try conn.queryText(a, gold_q);
+        const gold = if (gs) |s| s else "0";
+        const lh_q = try std.fmt.allocPrintSentinel(a, "SELECT last_hits FROM game_sessions WHERE id={s}", .{sid_s}, 0);
+        defer a.free(lh_q);
+        const lhs = try conn.queryText(a, lh_q);
+        const lh = if (lhs) |s| s else "0";
+        const out = try std.fmt.allocPrint(a, "{{"ok":true,"correct":{s},"gold":{s},"last_hits":{s},"prompt":"{s}","wanted":{d}}}", .{ if (ok) "true" else "false", gold, lh, nxt.prompt, expected });
+        defer a.free(out);
+        if (gs) |s| a.free(s);
+        if (lhs) |s| a.free(s);
+        return reply(w, "200 OK", "application/json", "", out);
+    }
     if (std.mem.eql(u8, method, "GET") and (std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home"))) {
         if (loadFile(a, "web/home.html")) |html| return reply(w, "200 OK", "text/html", "", html);
-        return reply(w, "200 OK", "text/html", "", "<a href=/enroll/pc>Enroll PC</a> <a href=/comms>Comms</a>");
+        return reply(w, "200 OK", "text/html", "", "<a href=/school>School</a> <a href=/lms>Courses</a> <a href=/algebra-war>Algebra War</a> <a href=/enroll/pc>Enroll PC</a> <a href=/comms>Comms</a>");
     }
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/enroll/pc")) {
         if (loadFile(a, "web/enroll_pc.html")) |html| return reply(w, "200 OK", "text/html", "", html);
     }
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/comms")) {
         if (loadFile(a, "web/comms.html")) |html| return reply(w, "200 OK", "text/html", "", html);
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/school")) {
+        if (loadFile(a, "web/school.html")) |html| return reply(w, "200 OK", "text/html", "", html);
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/lms")) {
+        if (loadFile(a, "web/lms.html")) |html| return reply(w, "200 OK", "text/html", "", html);
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/algebra-war")) {
+        if (loadFile(a, "web/algebra_war.html")) |html| return reply(w, "200 OK", "text/html", "", html);
     }
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/enroll/pc")) {
         const tok = try auth.generateSessionToken(a);
