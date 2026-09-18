@@ -94,6 +94,64 @@ pub const Conn = struct {
             \\  allowed INTEGER NOT NULL DEFAULT 1,
             \\  meta_json TEXT,
             \\  body TEXT);
+            \\CREATE TABLE IF NOT EXISTS school_years (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  label TEXT NOT NULL UNIQUE,
+            \\  starts_on TEXT NOT NULL DEFAULT '2026-09-01',
+            \\  ends_on TEXT NOT NULL DEFAULT '2027-06-30',
+            \\  is_current INTEGER NOT NULL DEFAULT 0);
+            \\CREATE TABLE IF NOT EXISTS children (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  given_name TEXT NOT NULL,
+            \\  grade_band TEXT NOT NULL DEFAULT '9-12',
+            \\  grade INTEGER,
+            \\  created_at TEXT NOT NULL DEFAULT (datetime('now')));
+            \\CREATE TABLE IF NOT EXISTS courses (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  code TEXT NOT NULL,
+            \\  title TEXT NOT NULL,
+            \\  credit_hours REAL NOT NULL DEFAULT 3,
+            \\  kind TEXT NOT NULL DEFAULT 'home',
+            \\  track TEXT NOT NULL DEFAULT 'legal',
+            \\  nys_bucket TEXT);
+            \\CREATE TABLE IF NOT EXISTS enrollments (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  course_id INTEGER NOT NULL,
+            \\  child_id INTEGER NOT NULL);
+            \\CREATE TABLE IF NOT EXISTS outcomes (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  enrollment_id INTEGER NOT NULL,
+            \\  as_of TEXT NOT NULL DEFAULT (datetime('now')),
+            \\  grade TEXT,
+            \\  narrative TEXT,
+            \\  source TEXT NOT NULL DEFAULT 'manual');
+            \\CREATE TABLE IF NOT EXISTS hour_logs (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  child_id INTEGER,
+            \\  on_date TEXT,
+            \\  minutes INTEGER NOT NULL DEFAULT 0,
+            \\  note TEXT);
+            \\CREATE TABLE IF NOT EXISTS game_sessions (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  child_id INTEGER,
+            \\  course_id INTEGER,
+            \\  mode TEXT NOT NULL DEFAULT 'lane',
+            \\  band INTEGER NOT NULL DEFAULT 1,
+            \\  started_at TEXT NOT NULL DEFAULT (datetime('now')),
+            \\  gold INTEGER NOT NULL DEFAULT 0,
+            \\  last_hits INTEGER NOT NULL DEFAULT 0,
+            \\  misses INTEGER NOT NULL DEFAULT 0,
+            \\  tower_down INTEGER NOT NULL DEFAULT 0,
+            \\  current_x INTEGER,
+            \\  current_prompt TEXT);
+            \\CREATE TABLE IF NOT EXISTS game_events (
+            \\  id INTEGER PRIMARY KEY AUTOINCREMENT,
+            \\  session_id INTEGER NOT NULL,
+            \\  ts TEXT NOT NULL DEFAULT (datetime('now')),
+            \\  kind TEXT NOT NULL,
+            \\  prompt TEXT,
+            \\  answer TEXT,
+            \\  correct INTEGER NOT NULL DEFAULT 0);
         );
         try self.exec(
             \\
@@ -108,6 +166,9 @@ pub const Conn = struct {
             \\ ('ExamLock', 'Exam', '{"mining":{"enabled":false},"mode":"exam","comms":{"outgoing_calls":"block_all","sms":"block_all"}}', 0),
             \\ ('Weekend', 'Weekend', '{"mining":{"enabled":false},"mode":"weekend"}', 0),
             \\ ('Monitor', 'Watch only', '{"mining":{"enabled":false},"mode":"monitor"}', 0);
+            \\INSERT OR IGNORE INTO school_years(label,is_current) VALUES('2026-27',1);
+            \\INSERT OR IGNORE INTO courses(code,title,credit_hours,kind,track,nys_bucket)
+            \\ VALUES('ALG1-WAR','Algebra 1 fluency (Algebra War)',1,'home','legal','mathematics');
         );
         return self;
     }
@@ -128,7 +189,6 @@ pub const Conn = struct {
         return @intCast(c.sqlite3_last_insert_rowid(self.db));
     }
 
-    /// First column of first row as owned string, or null.
     pub fn queryText(self: *Conn, allocator: std.mem.Allocator, sql: [:0]const u8) !?[]u8 {
         var stmt: ?*c.sqlite3_stmt = null;
         if (c.sqlite3_prepare_v2(self.db, sql.ptr, -1, &stmt, null) != c.SQLITE_OK) return error.Prepare;
