@@ -8,14 +8,16 @@ pub fn build(b: *std.Build) void {
     const default_bundle = resolved.os.tag == .windows;
     const bundle_sqlite = b.option(bool, "bundle-sqlite", "Compile third_party/sqlite/sqlite3.c instead of system lib") orelse default_bundle;
 
+    const root = b.createModule(.{
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+
     const exe = b.addExecutable(.{
         .name = "zig-mdm",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
+        .root_module = root,
     });
 
     if (bundle_sqlite) {
@@ -25,7 +27,7 @@ pub fn build(b: *std.Build) void {
         });
         exe.addIncludePath(b.path("third_party/sqlite"));
     } else {
-        exe.root_module.linkSystemLibrary("sqlite3", .{});
+        root.linkSystemLibrary("sqlite3", .{});
     }
 
     b.installArtifact(exe);

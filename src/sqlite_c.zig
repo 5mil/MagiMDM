@@ -12,7 +12,7 @@ pub extern fn sqlite3_exec(
     sql: [*:0]const u8,
     callback: ?*const fn (?*anyopaque, c_int, [*c][*c]u8, [*c][*c]u8) callconv(.c) c_int,
     arg: ?*anyopaque,
-    errmsg: *?[*c]u8,
+    errmsg: *[*c]u8,
 ) c_int;
 pub extern fn sqlite3_free(ptr: ?*anyopaque) void;
 pub extern fn sqlite3_last_insert_rowid(db: *sqlite3) i64;
