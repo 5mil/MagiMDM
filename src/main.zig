@@ -159,7 +159,7 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, stream: *std.net.Stream) !voi
         conn.exec(touch) catch {};
         const pol = try conn.queryText(a, "SELECT config_json FROM policies WHERE name='SchoolDay' LIMIT 1");
         const cfg = if (pol) |p| p else "{}";
-        const out = try std.fmt.allocPrint(a, "{{"ok":true,"device_id":1,"commands":[],"policy":{{"id":1,"name":"SchoolDay","config":{s}}}}}", .{cfg});
+        const out = try std.fmt.allocPrint(a, "{{\"ok\":true,\"device_id\":1,\"commands\":[],\"policy\":{{\"id\":1,\"name\":\"SchoolDay\",\"config\":{s}}}}}", .{cfg});
         defer a.free(out);
         return reply(w, "200 OK", "application/json", "", out);
     }
