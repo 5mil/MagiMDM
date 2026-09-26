@@ -1,7 +1,8 @@
-# Bitnami Moodle 5.2 + MariaDB. LAN bind (not router/public).
+# Bitnami images on Docker Hub are gone for anonymous pulls.
+# Use AWS public ECR tags instead.
 services:
   mariadb:
-    image: docker.io/bitnami/mariadb:11.4
+    image: public.ecr.aws/bitnami/mariadb:11.4
     restart: unless-stopped
     environment:
       ALLOW_EMPTY_PASSWORD: "yes"
@@ -14,7 +15,7 @@ services:
       - mariadb_data:/bitnami/mariadb
 
   moodle:
-    image: ${MOODLE_IMAGE:-docker.io/bitnami/moodle:5.2}
+    image: ${MOODLE_IMAGE:-public.ecr.aws/bitnami/moodle:5.2.0-debian-12-r4}
     restart: unless-stopped
     ports:
       - "8888:8080"
