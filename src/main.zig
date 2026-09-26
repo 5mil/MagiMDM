@@ -39,7 +39,8 @@ fn formGet(body: []const u8, key: []const u8) ?[]const u8 {
     while (it.next()) |pair| {
         var kv = std.mem.splitScalar(u8, pair, '=');
         const k = kv.next() orelse continue;
-        const v = kv.next() orelse "";
+        var v = kv.next() orelse "";
+        if (v.len > 0 and v[v.len - 1] == '\r') v = v[0 .. v.len - 1];
         if (std.mem.eql(u8, k, key)) return v;
     }
     return null;
@@ -71,6 +72,23 @@ fn readHttp(r: *std.Io.Reader, buf: []u8) usize {
         buf[n] = b;
         n += 1;
         if (n >= 4 and std.mem.eql(u8, buf[n - 4 .. n], "\r\n\r\n")) break;
+    }
+    const head = buf[0..n];
+    var extra: usize = 0;
+    if (std.mem.indexOf(u8, head, "Content-Length:")) |i| {
+        var p = i + "Content-Length:".len;
+        while (p < n and head[p] == ' ') p += 1;
+        var val: usize = 0;
+        while (p < n and head[p] >= '0' and head[p] <= '9') : (p += 1) {
+            val = val * 10 + @as(usize, head[p] - '0');
+        }
+        extra = val;
+    }
+    var k: usize = 0;
+    while (k < extra and n < buf.len) : (k += 1) {
+        const b = r.takeByte() catch break;
+        buf[n] = b;
+        n += 1;
     }
     return n;
 }
