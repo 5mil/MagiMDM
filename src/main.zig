@@ -74,10 +74,10 @@ pub fn main(init: std.process.Init) !void {
     };
     defer conn.close();
 
-    const addr = try std.Io.net.IpAddress.parse("127.0.0.1", cfg.port);
+    const addr = try std.Io.net.IpAddress.parse(cfg.host, cfg.port);
     var server = try addr.listen(io, .{});
     defer server.deinit(io);
-    std.debug.print("MagiMDM http://127.0.0.1:{d}/login  db=data/mdm.db  zig>=0.16\n", .{cfg.port});
+    std.debug.print("MagiMDM LAN http://{s}:{d}/login  (use tank LAN IP from other PCs)\n", .{ cfg.host, cfg.port });
 
     while (true) {
         const stream = server.accept(io) catch continue;
