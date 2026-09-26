@@ -68,9 +68,9 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const a = std.heap.page_allocator;
     const cfg = config.Config{};
-    std.Io.Dir.cwd().makePath(io, "data") catch {};
+    // Create data/ on the host: mkdir -p data
     var conn = dbmod.Conn.open("data/mdm.db") catch |e| {
-        std.debug.print("db open failed: {s} (install libsqlite3-dev)\n", .{@errorName(e)});
+        std.debug.print("db open failed: {s} (install libsqlite3-dev; mkdir -p data)\n", .{@errorName(e)});
         return e;
     };
     defer conn.close();
