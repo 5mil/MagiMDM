@@ -68,15 +68,14 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const a = std.heap.page_allocator;
     const cfg = config.Config{};
-    // Create data/ on the host: mkdir -p data
     var conn = dbmod.Conn.open("data/mdm.db") catch |e| {
         std.debug.print("db open failed: {s} (install libsqlite3-dev; mkdir -p data)\n", .{@errorName(e)});
         return e;
     };
     defer conn.close();
 
-    const addr = try std.Io.net.IpAddress.parseIp4("127.0.0.1", cfg.port);
-    var server = try addr.listen(io, .{ .reuse_address = true });
+    const addr = try std.Io.net.IpAddress.parse("127.0.0.1", cfg.port);
+    var server = try addr.listen(io, .{});
     defer server.deinit(io);
     std.debug.print("MagiMDM http://127.0.0.1:{d}/login  db=data/mdm.db  zig>=0.16\n", .{cfg.port});
 
