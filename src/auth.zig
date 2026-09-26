@@ -1,4 +1,5 @@
 //! Authentication helpers: argon2id password hashing and session tokens.
+//! Zig 0.16+.
 
 const std = @import("std");
 const argon2 = std.crypto.pwhash.argon2;
@@ -10,12 +11,9 @@ pub const AuthError = error{
     OutOfMemory,
 };
 
-/// Generate a cryptographically random session token (hex-encoded).
 pub fn generateSessionToken(allocator: std.mem.Allocator) AuthError![]u8 {
     var buf: [32]u8 = undefined;
-    const filled = std.os.linux.getrandom(&buf, buf.len, 0);
-    if (@as(isize, @bitCast(filled)) < 0) @memset(&buf, 0x5a);
-
+    std.crypto.random.bytes(&buf);
     var hex: [64]u8 = undefined;
     const charset = "0123456789abcdef";
     for (buf, 0..) |b, i| {
@@ -25,7 +23,6 @@ pub fn generateSessionToken(allocator: std.mem.Allocator) AuthError![]u8 {
     return allocator.dupe(u8, &hex) catch AuthError.OutOfMemory;
 }
 
-/// Hash a password with argon2id (OWASP parameters, PHC string format).
 pub fn hashPassword(allocator: std.mem.Allocator, io: std.Io, password: []const u8) AuthError![]u8 {
     var out: [256]u8 = undefined;
     const hash = argon2.strHash(password, .{
@@ -37,7 +34,6 @@ pub fn hashPassword(allocator: std.mem.Allocator, io: std.Io, password: []const 
     return allocator.dupe(u8, hash) catch AuthError.OutOfMemory;
 }
 
-/// Verify password against stored hash.
 pub fn verifyPassword(allocator: std.mem.Allocator, io: std.Io, password: []const u8, stored_hash: []const u8) bool {
     if (std.mem.startsWith(u8, stored_hash, "PLACEHOLDER$")) {
         return std.mem.eql(u8, password, stored_hash["PLACEHOLDER$".len..]);
@@ -53,19 +49,12 @@ pub fn sessionCookieHeader(
     max_age_secs: i64,
     secure: bool,
 ) AuthError![]u8 {
-    if (secure) {
-        return std.fmt.allocPrint(
-            allocator,
-            "{s}={s}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age={d}",
-            .{ name, value, max_age_secs },
-        ) catch AuthError.OutOfMemory;
-    } else {
-        return std.fmt.allocPrint(
-            allocator,
-            "{s}={s}; Path=/; HttpOnly; SameSite=Lax; Max-Age={d}",
-            .{ name, value, max_age_secs },
-        ) catch AuthError.OutOfMemory;
-    }
+    const flag: []const u8 = if (secure) "; Secure" else "";
+    return std.fmt.allocPrint(
+        allocator,
+        "{s}={s}; Path=/; HttpOnly; SameSite=Lax{s}; Max-Age={d}",
+        .{ name, value, flag, max_age_secs },
+    ) catch AuthError.OutOfMemory;
 }
 
 pub fn clearSessionCookie(allocator: std.mem.Allocator, name: []const u8) AuthError![]u8 {
