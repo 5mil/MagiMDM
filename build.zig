@@ -15,21 +15,20 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
-    const exe = b.addExecutable(.{
-        .name = "zig-mdm",
-        .root_module = root,
-    });
-
     if (bundle_sqlite) {
-        exe.addCSourceFile(.{
+        root.addCSourceFile(.{
             .file = b.path("third_party/sqlite/sqlite3.c"),
             .flags = &.{ "-DSQLITE_THREADSAFE=1", "-DSQLITE_DQS=0", "-DSQLITE_OMIT_LOAD_EXTENSION" },
         });
-        exe.addIncludePath(b.path("third_party/sqlite"));
+        root.addIncludePath(b.path("third_party/sqlite"));
     } else {
         root.linkSystemLibrary("sqlite3", .{});
     }
 
+    const exe = b.addExecutable(.{
+        .name = "zig-mdm",
+        .root_module = root,
+    });
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
