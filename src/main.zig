@@ -5,6 +5,7 @@ const auth = @import("auth.zig");
 const enroll_pc = @import("enroll_pc.zig");
 const config = @import("config.zig");
 const algebra = @import("algebra.zig");
+const ui = @import("ui.zig");
 
 const login_html =
     \\<!DOCTYPE html><html><body style="font-family:sans-serif;background:#020617;color:#e2e8f0;padding:2rem">
@@ -60,21 +61,7 @@ fn reply(w: *std.Io.Writer, code: []const u8, ctype: []const u8, extra_headers: 
 }
 
 fn loadFile(a: std.mem.Allocator, path: []const u8) ?[]u8 {
-    const src: []const u8 = if (std.mem.eql(u8, path, "web/home.html"))
-        @embedFile("../web/home.html")
-    else if (std.mem.eql(u8, path, "web/lms.html"))
-        @embedFile("../web/lms.html")
-    else if (std.mem.eql(u8, path, "web/school.html"))
-        @embedFile("../web/school.html")
-    else if (std.mem.eql(u8, path, "web/comms.html"))
-        @embedFile("../web/comms.html")
-    else if (std.mem.eql(u8, path, "web/enroll_pc.html"))
-        @embedFile("../web/enroll_pc.html")
-    else if (std.mem.eql(u8, path, "web/algebra_war.html"))
-        @embedFile("../web/algebra_war.html")
-    else
-        return null;
-    return a.dupe(u8, src) catch null;
+    return ui.load(a, path);
 }
 
 fn readHttp(r: *std.Io.Reader, buf: []u8) usize {
