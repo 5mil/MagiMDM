@@ -67,6 +67,6 @@ pub const Conn = struct {
         defer _ = c.sqlite3_finalize(stmt);
         if (c.sqlite3_step(stmt) != c.SQLITE_ROW) return null;
         const raw = c.sqlite3_column_text(stmt, 0) orelse return null;
-        return try allocator.dupe(u8, std.mem.span(raw));
+        return try allocator.dupe(u8, std.mem.sliceTo(raw, 0));
     }
 };
