@@ -1,51 +1,50 @@
-# Moodle sibling — launch now, manage later
+# Moodle 5.2 sibling — launch now, manage later
 
-Moodle is **not** inside `zig-mdm`. It is a Docker stack you start beside the console. MagiMDM will later store course rows (`kind=moodle`) and pull grades into `outcomes`. Until that hook ships, you launch Moodle here and keep the transcript in MagiMDM by hand or via `tools/learn_sync.sh` style paste.
+Default classroom is **Moodle 5.2** (`docker.io/bitnami/moodle:5.2`). It is not inside `zig-mdm`. MagiMDM later stores `courses.kind=moodle` and grades in `outcomes`. Until that hook ships, teach in Moodle and log hours on `/school`.
 
-Open edX remains an optional second classroom (`docs/PLATFORM.md`). You can run Moodle only.
+## Ubuntu 26.04 / WSL — 5.2
 
-## Launch (Linux / WSL)
-
-Need Docker Engine or Docker Desktop (WSL backend).
+Docker Engine or Desktop. Then:
 
 ```bash
-cd MagiMDM/deploy/moodle
-cp .env.example .env
-# edit MOODLE_PASSWORD
-docker compose up -d
-docker compose logs -f moodle
+cd ~/MagiMDM
+git pull
+cp deploy/moodle/.env.example deploy/moodle/.env
+# edit MOODLE_PASSWORD (must meet Moodle complexity)
+./tools/moodle_up.sh
+docker compose -f deploy/moodle/docker-compose.yml logs -f moodle
 ```
 
-Wait until Moodle finishes first-run install (several minutes).
+First boot 3–8 minutes. Do not Ctrl+C the compose process until `up -d` returns; logs `-f` is optional.
 
 - Site: http://127.0.0.1:8888
-- User: `admin` (see `.env`)
+- User: `admin`
+- Password: from `.env` (example `ChangeMeMoodle1`)
+- Image: `bitnami/moodle:5.2`
 - zig-mdm stays on :8787
 
-Stop: `docker compose down` (add `-v` only if you intend to wipe the classroom).
+If a previous 4.5 attempt left volumes:
 
-Windows native: use Docker Desktop, same `deploy\moodle` folder, `docker compose up -d`.
+```bash
+cd ~/MagiMDM/deploy/moodle
+docker compose down -v
+```
 
-Do **not** publish 8888 on the router. Tailscale or LAN only.
+Then `moodle_up.sh` again. `-v` wipes the classroom.
 
-## Caddy (optional)
+Stop: `docker compose -f deploy/moodle/docker-compose.yml down` (no `-v`).
 
-See `deploy/Caddyfile.platform` — `learn.home` can point at `127.0.0.1:8888` if you are not using Open edX on :80.
+Bitnami still failing → `docker compose -f deploy/moodle/docker-compose.alpine.yml up -d` (also 5.x-class). See [MOODLE_FIX.md](./MOODLE_FIX.md).
 
-## Later: MagiMDM management
+Do **not** publish 8888 on the router.
 
-Planned, not in the Zig binary yet:
+## Later: MagiMDM
 
-1. `courses.kind = 'moodle'` + `moodle_id` (course idnumber).
-2. Parent page `/lms` lists Moodle courses next to `home` / `openedx` / `college`.
-3. `POST /api/learn/sync` reads Moodle web service (`core_enrol_get_users_courses` / grade export) into `outcomes`.
-4. SchoolDay allowlist includes `http://learn.home`.
-
-Token placeholder: `data/moodle.env`
+`data/moodle.env`:
 
 ```
 MOODLE_URL=http://127.0.0.1:8888
 MOODLE_WSTOKEN=
 ```
 
-Create a Moodle web-service token as admin when you are ready to wire sync. Until then, launch + teach in Moodle; log hours on `/school`.
+Versions / restore: [MOODLE_VERSIONS.md](./MOODLE_VERSIONS.md).
