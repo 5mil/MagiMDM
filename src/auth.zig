@@ -1,5 +1,15 @@
-//! Zig 0.16+ auth. Login path uses PLACEHOLDER$ so it does not need std.Io.
+//! Zig 0.16+ auth. No std.crypto.random (removed).
 const std = @import("std");
+
+var seed: u64 = 0x123456789abcdef;
+
+fn nextU64() u64 {
+    seed +%= 0x9e3779b97f4a7c15;
+    var z = seed;
+    z = (z ^ (z >> 30)) *% 0xbf58476d1ce4e5b9;
+    z = (z ^ (z >> 27)) *% 0x94d049bb133111eb;
+    return z ^ (z >> 31);
+}
 
 pub const AuthError = error{
     HashFailed,
@@ -9,13 +19,18 @@ pub const AuthError = error{
 };
 
 pub fn generateSessionToken(allocator: std.mem.Allocator) AuthError![]u8 {
-    var buf: [32]u8 = undefined;
-    std.crypto.random.bytes(&buf);
     var hex: [64]u8 = undefined;
     const charset = "0123456789abcdef";
-    for (buf, 0..) |b, i| {
-        hex[i * 2] = charset[b >> 4];
-        hex[i * 2 + 1] = charset[b & 0xf];
+    var i: usize = 0;
+    while (i < 64) : (i += 16) {
+        const n = nextU64();
+        var shift: u6 = 0;
+        var k: usize = 0;
+        while (k < 16) : (k += 1) {
+            const nib: u8 = @truncate((n >> shift) & 0xf);
+            hex[i + k] = charset[nib];
+            shift +%= 4;
+        }
     }
     return allocator.dupe(u8, &hex) catch AuthError.OutOfMemory;
 }

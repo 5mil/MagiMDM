@@ -1,13 +1,24 @@
 const std = @import("std");
 
+var seed: u64 = 0x9e3779b97f4a7c15;
+
+fn nextU64() u64 {
+    seed +%= 0x9e3779b97f4a7c15;
+    var z = seed;
+    z = (z ^ (z >> 30)) *% 0xbf58476d1ce4e5b9;
+    z = (z ^ (z >> 27)) *% 0x94d049bb133111eb;
+    return z ^ (z >> 31);
+}
+
+fn rnd(min: i32, max: i32) i32 {
+    const span: u64 = @intCast(max - min + 1);
+    return min + @as(i32, @intCast(nextU64() % span));
+}
+
 pub const Problem = struct {
     prompt: []u8,
     x: i32,
 };
-
-fn rnd(min: i32, max: i32) i32 {
-    return std.crypto.random.intRangeAtMost(i32, min, max);
-}
 
 pub fn makeProblem(a: std.mem.Allocator, band: u8) !Problem {
     if (band <= 1) {
