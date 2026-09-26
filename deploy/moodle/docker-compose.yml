@@ -1,4 +1,4 @@
-# Matches current Bitnami sample (mariadb service name, no broken healthcheck).
+# Bitnami Moodle 5.2 + MariaDB. LAN bind (not router/public).
 services:
   mariadb:
     image: docker.io/bitnami/mariadb:11.4
@@ -17,7 +17,7 @@ services:
     image: ${MOODLE_IMAGE:-docker.io/bitnami/moodle:5.2}
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8888:8080"
+      - "8888:8080"
     environment:
       ALLOW_EMPTY_PASSWORD: "yes"
       MOODLE_DATABASE_HOST: mariadb

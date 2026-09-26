@@ -7,5 +7,5 @@ if [ ! -f .env ]; then
   echo "wrote $HERE/.env — change passwords"
 fi
 docker compose up -d
-echo "Moodle http://127.0.0.1:8888  (first boot is slow)"
-echo "MagiMDM stays at http://127.0.0.1:8787"
+echo "Moodle LAN http://0.0.0.0:8888  (use tank LAN IP from other PCs)"
+echo "MagiMDM stays at port 8787"
