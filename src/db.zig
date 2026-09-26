@@ -37,6 +37,7 @@ pub const Conn = struct {
         try self.exec(
             \\
             \\INSERT OR IGNORE INTO users (username, password_hash) VALUES ('admin', 'PLACEHOLDER$changeme');
+            \\UPDATE users SET password_hash='PLACEHOLDER$changeme' WHERE username='admin' AND password_hash IN ('PLACEHOLDER','');
             \\INSERT OR IGNORE INTO images (slug, label, os) VALUES ('linux-debian12-student', 'Debian 12 student', 'linux'), ('windows11-student', 'Windows 11 student', 'windows');
             \\INSERT OR IGNORE INTO policies (name, description, config_json, is_default) VALUES ('Baseline', 'Floor', '{\"mining\":{\"enabled\":false}}', 1), ('SchoolDay', 'Class hours', '{\"mining\":{\"enabled\":false},\"mode\":\"school\"}', 0), ('AfterHours', 'Evening', '{\"mining\":{\"enabled\":false},\"mode\":\"after\"}', 0), ('ExamLock', 'Exam', '{\"mining\":{\"enabled\":false},\"mode\":\"exam\"}', 0), ('Weekend', 'Weekend', '{\"mining\":{\"enabled\":false},\"mode\":\"weekend\"}', 0), ('Monitor', 'Watch only', '{\"mining\":{\"enabled\":false},\"mode\":\"monitor\"}', 0);
             \\INSERT OR IGNORE INTO school_years(label,is_current) VALUES('2026-27',1);
