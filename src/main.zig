@@ -59,14 +59,16 @@ fn reply(w: *std.Io.Writer, code: []const u8, ctype: []const u8, extra_headers: 
 }
 
 fn loadFile(a: std.mem.Allocator, path: []const u8) ?[]u8 {
-    return std.fs.cwd().readFileAlloc(path, a, .limited(1_000_000)) catch null;
+    _ = a;
+    _ = path;
+    return null;
 }
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const a = std.heap.page_allocator;
     const cfg = config.Config{};
-    std.fs.cwd().makePath("data") catch {};
+    std.Io.Dir.cwd().makePath(io, "data") catch {};
     var conn = dbmod.Conn.open("data/mdm.db") catch |e| {
         std.debug.print("db open failed: {s} (install libsqlite3-dev)\n", .{@errorName(e)});
         return e;
