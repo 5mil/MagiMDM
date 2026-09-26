@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Enroll PC</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-slate-950 text-slate-100 p-8 max-w-xl mx-auto">
+<h1 class="text-2xl font-semibold mb-4">Enroll PC</h1>
+<form method="post" action="/enroll/pc" class="space-y-4">
+  <label class="block text-sm">Platform
+    <select name="platform" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-2">
+      <option value="linux">Linux</option>
+      <option value="windows">Windows 11</option>
+    </select>
+  </label>
+  <button class="bg-sky-600 rounded px-4 py-2">Create token</button>
+</form>
+</body></html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/><title>Comms archive</title>
+<script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-slate-950 text-slate-100 p-6">
+<h1 class="text-2xl font-semibold mb-2">Communications archive</h1>
+<p class="text-slate-400 text-sm mb-4">Native calls and SMS the agent uploaded.</p>
+<pre id="out" class="text-sm whitespace-pre-wrap">Loading…</pre>
+<script>
+fetch('/api/parent/comms', {credentials:'same-origin'})
+  .then(r => r.json())
+  .then(j => {
+    const ev = j.events || [];
+    document.getElementById('out').textContent = ev.map(e =>
+      [e.ts, e.name, e.direction, e.kind, e.peer, e.allowed ? 'ok' : 'block'].join('  ')
+    ).join('\n') || 'No events yet.';
+  })
+  .catch(() => { document.getElementById('out').textContent = 'No events yet.'; });
+</script>
+</body></html>
