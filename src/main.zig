@@ -60,9 +60,21 @@ fn reply(w: *std.Io.Writer, code: []const u8, ctype: []const u8, extra_headers: 
 }
 
 fn loadFile(a: std.mem.Allocator, path: []const u8) ?[]u8 {
-    _ = a;
-    _ = path;
-    return null;
+    const src: []const u8 = if (std.mem.eql(u8, path, "web/home.html"))
+        @embedFile("../web/home.html")
+    else if (std.mem.eql(u8, path, "web/lms.html"))
+        @embedFile("../web/lms.html")
+    else if (std.mem.eql(u8, path, "web/school.html"))
+        @embedFile("../web/school.html")
+    else if (std.mem.eql(u8, path, "web/comms.html"))
+        @embedFile("../web/comms.html")
+    else if (std.mem.eql(u8, path, "web/enroll_pc.html"))
+        @embedFile("../web/enroll_pc.html")
+    else if (std.mem.eql(u8, path, "web/algebra_war.html"))
+        @embedFile("../web/algebra_war.html")
+    else
+        return null;
+    return a.dupe(u8, src) catch null;
 }
 
 fn readHttp(r: *std.Io.Reader, buf: []u8) usize {
