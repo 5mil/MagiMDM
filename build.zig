@@ -14,9 +14,9 @@ pub fn build(b: *std.Build) void {
             .root_source_file = b.path("src/main.zig"),
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
-    exe.linkLibC();
 
     if (bundle_sqlite) {
         exe.addCSourceFile(.{
@@ -25,7 +25,7 @@ pub fn build(b: *std.Build) void {
         });
         exe.addIncludePath(b.path("third_party/sqlite"));
     } else {
-        exe.linkSystemLibrary("sqlite3");
+        exe.root_module.linkSystemLibrary("sqlite3", .{});
     }
 
     b.installArtifact(exe);
