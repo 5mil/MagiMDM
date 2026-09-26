@@ -64,6 +64,17 @@ fn loadFile(a: std.mem.Allocator, path: []const u8) ?[]u8 {
     return null;
 }
 
+fn readHttp(r: *std.Io.Reader, buf: []u8) usize {
+    var n: usize = 0;
+    while (n < buf.len) {
+        const b = r.takeByte() catch break;
+        buf[n] = b;
+        n += 1;
+        if (n >= 4 and std.mem.eql(u8, buf[n - 4 .. n], "\r\n\r\n")) break;
+    }
+    return n;
+}
+
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
     const a = std.heap.page_allocator;
@@ -82,12 +93,12 @@ pub fn main(init: std.process.Init) !void {
     while (true) {
         const stream = server.accept(io) catch continue;
         defer stream.close(io);
-        var rbuf: [65536]u8 = undefined;
-        var wbuf: [65536]u8 = undefined;
+        var rbuf: [4096]u8 = undefined;
+        var wbuf: [8192]u8 = undefined;
         var sr = stream.reader(io, &rbuf);
         var sw = stream.writer(io, &wbuf);
-        var req_store: [65536]u8 = undefined;
-        const n = sr.interface.readSliceShort(&req_store) catch 0;
+        var req_store: [8192]u8 = undefined;
+        const n = readHttp(&sr.interface, &req_store);
         handle(a, &conn, req_store[0..n], &sw.interface) catch |e| {
             std.debug.print("req err {s}\n", .{@errorName(e)});
         };
