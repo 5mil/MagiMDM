@@ -38,7 +38,7 @@ pub const Conn = struct {
             \\
             \\INSERT OR IGNORE INTO users (username, password_hash) VALUES ('admin', 'PLACEHOLDER$changeme');
             \\INSERT OR IGNORE INTO images (slug, label, os) VALUES ('linux-debian12-student', 'Debian 12 student', 'linux'), ('windows11-student', 'Windows 11 student', 'windows');
-            \\INSERT OR IGNORE INTO policies (name, description, config_json, is_default) VALUES ('Baseline', 'Floor', '{"mining":{"enabled":false}}', 1), ('SchoolDay', 'Class hours', '{"mining":{"enabled":false},"mode":"school"}', 0), ('AfterHours', 'Evening', '{"mining":{"enabled":false},"mode":"after"}', 0), ('ExamLock', 'Exam', '{"mining":{"enabled":false},"mode":"exam"}', 0), ('Weekend', 'Weekend', '{"mining":{"enabled":false},"mode":"weekend"}', 0), ('Monitor', 'Watch only', '{"mining":{"enabled":false},"mode":"monitor"}', 0);
+            \\INSERT OR IGNORE INTO policies (name, description, config_json, is_default) VALUES ('Baseline', 'Floor', '{\"mining\":{\"enabled\":false}}', 1), ('SchoolDay', 'Class hours', '{\"mining\":{\"enabled\":false},\"mode\":\"school\"}', 0), ('AfterHours', 'Evening', '{\"mining\":{\"enabled\":false},\"mode\":\"after\"}', 0), ('ExamLock', 'Exam', '{\"mining\":{\"enabled\":false},\"mode\":\"exam\"}', 0), ('Weekend', 'Weekend', '{\"mining\":{\"enabled\":false},\"mode\":\"weekend\"}', 0), ('Monitor', 'Watch only', '{\"mining\":{\"enabled\":false},\"mode\":\"monitor\"}', 0);
             \\INSERT OR IGNORE INTO school_years(label,is_current) VALUES('2026-27',1);
             \\INSERT OR IGNORE INTO courses(code,title,credit_hours,kind,track,nys_bucket) VALUES('ALG1-WAR','Algebra 1 fluency (Algebra War)',1,'home','legal','mathematics');
         );
@@ -66,8 +66,7 @@ pub const Conn = struct {
         if (c.sqlite3_prepare_v2(self.db, sql.ptr, -1, &stmt, null) != c.SQLITE_OK) return error.Prepare;
         defer _ = c.sqlite3_finalize(stmt);
         if (c.sqlite3_step(stmt) != c.SQLITE_ROW) return null;
-        const p = c.sqlite3_column_text(stmt, 0);
-        if (p == null) return null;
-        return try allocator.dupe(u8, std.mem.span(p));
+        const raw = c.sqlite3_column_text(stmt, 0) orelse return null;
+        return try allocator.dupe(u8, std.mem.span(raw));
     }
 };
