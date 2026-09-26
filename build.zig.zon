@@ -1,7 +1,7 @@
 .{
     .name = .zig_mdm,
     .version = "0.1.0",
-    .fingerprint = 0x8a3f1c2e9b7d4056,
+    .fingerprint = 0x306e511557f0d94d,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .zqlite = .{
