@@ -146,7 +146,7 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, stream: *std.net.Stream) !voi
             defer a.free(bind);
             conn.exec(bind) catch {};
         }
-        const out = try std.fmt.allocPrint(a, "{{"ok":true,"uuid":"{s}","device_id":{d}}}", .{ uuid, conn.lastId() });
+        const out = try std.fmt.allocPrint(a, "{{"ok,":true,"uuid":"{s}","device_id":{d}}}", .{ uuid, conn.lastId() });
         defer a.free(out);
         return reply(w, "200 OK", "application/json", "", out);
     }
