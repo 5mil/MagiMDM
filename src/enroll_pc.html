@@ -1,16 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"/><title>Enroll PC</title>
-<script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-slate-950 text-slate-100 p-8 max-w-xl mx-auto">
-<h1 class="text-2xl font-semibold mb-4">Enroll PC</h1>
-<form method="post" action="/enroll/pc" class="space-y-4">
-  <label class="block text-sm">Platform
-    <select name="platform" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded p-2">
-      <option value="linux">Linux</option>
-      <option value="windows">Windows 11</option>
-    </select>
-  </label>
-  <button class="bg-sky-600 rounded px-4 py-2">Create token</button>
-</form>
-</body></html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Add a device</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+<header class="border-b border-slate-800 px-6 py-4 flex gap-4 items-center">
+  <a class="text-sky-400" href="/">Desk</a>
+  <h1 class="text-xl font-semibold">Add a device</h1>
+</header>
+<main class="p-6 max-w-4xl mx-auto space-y-8">
+  <p class="text-slate-400 text-sm">One token per device. Blank Android: six taps on Hello, scan the factory QR. Laptops: USB pack. Guide: docs/ONBOARD.md</p>
+  <form method="post" action="/enroll/pc" class="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4">
+    <label class="block text-sm">Who
+      <input name="label" value="student" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2"/>
+    </label>
+    <label class="block text-sm">Kind
+      <select name="platform" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2">
+        <option value="android">Android — blank / QR</option>
+        <option value="linux">Linux laptop</option>
+        <option value="windows">Windows 11 laptop</option>
+      </select>
+    </label>
+    <button class="bg-sky-600 rounded-xl px-4 py-2">Create token</button>
+  </form>
+  <p class="text-slate-500 text-sm">After submit, the next page prints TOKEN= and USB notes. Rebuild after pulling so POST returns HTML that includes a QR (see ONBOARD.md).</p>
+</main>
+</body>
+</html>

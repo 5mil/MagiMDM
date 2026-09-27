@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Add a device</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+<header class="border-b border-slate-800 px-6 py-4 flex gap-4 items-center">
+  <a class="text-sky-400" href="/">Desk</a>
+  <h1 class="text-xl font-semibold">Add a device</h1>
+</header>
+<main class="p-6 max-w-4xl mx-auto space-y-8">
+  <p class="text-slate-400 text-sm">One token per device. Blank Android uses the six-tap QR on the Hello screen. Laptops use a USB pack. Do not reuse tokens.</p>
+
+  <form id="f" method="post" action="/enroll/pc" class="rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-4">
+    <label class="block text-sm">Who is this for
+      <input name="label" id="label" value="student" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2"/>
+    </label>
+    <label class="block text-sm">Kind
+      <select name="platform" id="platform" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2">
+        <option value="android">Android phone — blank / QR</option>
+        <option value="android-used">Android phone — already set up (weak)</option>
+        <option value="linux">Linux laptop — blank disk USB</option>
+        <option value="windows">Windows 11 laptop — blank disk USB</option>
+      </select>
+    </label>
+    <label class="block text-sm">Server URL the device will call
+      <input id="mdmurl" name="mdm_url" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2"/>
+    </label>
+    <label class="block text-sm">APK URL for factory QR (Android blank only)
+      <input id="apkurl" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2"/>
+    </label>
+    <button class="bg-sky-600 hover:bg-sky-500 rounded-xl px-4 py-2">Create token and show QR</button>
+  </form>
+
+  <section id="out" class="hidden rounded-2xl bg-slate-900 border border-slate-800 p-5">
+    <h2 class="text-lg font-medium mb-2">This device</h2>
+    <pre id="notes" class="text-sm whitespace-pre-wrap bg-slate-950 rounded p-3 mb-4"></pre>
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <p class="text-sky-400 text-sm mb-2">Blank Android QR (six taps)</p>
+        <div id="qr-afw" class="bg-white p-3 inline-block rounded"></div>
+      </div>
+      <div>
+        <p class="text-sky-400 text-sm mb-2">Already-set-up phone QR (URL + token)</p>
+        <div id="qr-link" class="bg-white p-3 inline-block rounded"></div>
+      </div>
+    </div>
+    <p class="text-slate-500 text-xs mt-4">Print this page. Token is shown once. Full steps: docs/ONBOARD.md</p>
+  </section>
+
+  <section class="text-sm text-slate-400 space-y-2">
+    <p><strong class="text-slate-200">Blank Android.</strong> Wipe → Hello screen → tap six times → scan left QR → house Wi-Fi.</p>
+    <p><strong class="text-slate-200">Laptop.</strong> After the token appears run on tank:<br/>
+      <code class="text-slate-200">TOKEN=… MDM_URL=http://192.168.50.143:8787 ./tools/usb_pack.sh /tmp/usb linux</code>
+      (or <code>windows</code>).</p>
+    <p><strong class="text-slate-200">iPhone student.</strong> Not Device Owner. Parent app only.</p>
+  </section>
+</main>
+<script>
+const host = location.hostname;
+const port = location.port || '8787';
+const base = location.protocol + '//' + host + ':' + port;
+document.getElementById('mdmurl').value = base;
+document.getElementById('apkurl').value = location.protocol + '//' + host + ':8788/agent.apk';
+
+const params = new URLSearchParams(location.search);
+const tokenFromServer = params.get('token');
+if (tokenFromServer) show(tokenFromServer, params.get('platform') || 'android');
+
+function show(token, platform) {
+  const url = document.getElementById('mdmurl').value.replace(/\/$/, '');
+  const apk = document.getElementById('apkurl').value;
+  const label = document.getElementById('label').value;
+  const afw = JSON.stringify({
+    'android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME': 'com.zigmdm.agent/.MdmDeviceAdminReceiver',
+    'android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION': apk,
+    'android.app.extra.PROVISIONING_SKIP_ENCRYPTION': true,
+    'android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED': true,
+    'android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE': { server: url, token: token }
+  });
+  const link = url + '/enroll?token=' + encodeURIComponent(token);
+  document.getElementById('notes').textContent =
+    'label: ' + label + '\nplatform: ' + platform + '\ntoken: ' + token + '\nserver: ' + url +
+    '\n\nUSB (PC): TOKEN=' + token + ' MDM_URL=' + url + ' ./tools/usb_pack.sh /tmp/usb ' +
+    (platform === 'windows' ? 'windows' : 'linux');
+  document.getElementById('out').classList.remove('hidden');
+  document.getElementById('qr-afw').innerHTML = '';
+  document.getElementById('qr-link').innerHTML = '';
+  new QRCode(document.getElementById('qr-afw'), { text: afw, width: 196, height: 196 });
+  new QRCode(document.getElementById('qr-link'), { text: link, width: 196, height: 196 });
+}
+</script>
+</body>
+</html>

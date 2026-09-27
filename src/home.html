@@ -15,8 +15,12 @@
   <a class="text-sm text-slate-400 hover:text-white" href="/logout">Sign out</a>
 </header>
 <main class="p-6 max-w-6xl mx-auto">
-  <p class="text-slate-400 mb-6">Policies, devices, classroom, and Algebra War. Moodle is the course room on port 8888.</p>
+  <p class="text-slate-400 mb-6">Add devices from one page. QR for blank Androids. USB pack for laptops.</p>
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    <a href="/enroll/pc" class="block rounded-2xl bg-sky-950 border border-sky-700 p-5 hover:border-sky-400">
+      <p class="text-sky-300 text-sm">Start here</p>
+      <p class="text-lg font-medium">Add a device (QR / USB)</p>
+    </a>
     <a href="/school" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
       <p class="text-sky-400 text-sm">School year</p>
       <p class="text-lg font-medium">Hours, courses, NYS buckets</p>
@@ -28,10 +32,6 @@
     <a href="/algebra-war" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
       <p class="text-sky-400 text-sm">Practice</p>
       <p class="text-lg font-medium">Algebra War</p>
-    </a>
-    <a href="/enroll/pc" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
-      <p class="text-sky-400 text-sm">Devices</p>
-      <p class="text-lg font-medium">Enroll PC / image</p>
     </a>
     <a href="/comms" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
       <p class="text-sky-400 text-sm">Safeguards</p>
@@ -50,8 +50,7 @@
   </div>
 </main>
 <script>
-  const host = location.hostname;
-  document.getElementById('moodle-link').href = 'http://' + host + ':8888';
+  document.getElementById('moodle-link').href = 'http://' + location.hostname + ':8888';
 </script>
 </body>
 </html>
