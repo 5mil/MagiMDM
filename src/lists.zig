@@ -21,6 +21,32 @@ fn esc(a: std.mem.Allocator, s: []const u8) ![]u8 {
     return out.toOwnedSlice();
 }
 
+fn rowsJson(a: std.mem.Allocator, conn: *dbmod.Conn, sql: [:0]const u8, key: []const u8, cols: u8) ![]u8 {
+    var stmt: ?*c.sqlite3_stmt = null;
+    if (c.sqlite3_prepare_v2(conn.db, sql.ptr, -1, &stmt, null) != c.SQLITE_OK) {
+        return try std.fmt.allocPrint(a, "{{\"{s}\":[]}}", .{key});
+    }
+    defer _ = c.sqlite3_finalize(stmt);
+    var buf = std.ArrayList(u8).init(a);
+    try buf.writer().print("{{\"{s}\":[", .{key});
+    var first = true;
+    while (c.sqlite3_step(stmt) == c.SQLITE_ROW) {
+        if (!first) try buf.appendSlice(",");
+        first = false;
+        try buf.appendSlice("{");
+        var i: u8 = 0;
+        while (i < cols) : (i += 1) {
+            if (i > 0) try buf.appendSlice(",");
+            const v = try esc(a, col(stmt, i));
+            defer a.free(v);
+            try buf.writer().print("\"c{d}\":\"{s}\"", .{ i, v });
+        }
+        try buf.appendSlice("}");
+    }
+    try buf.appendSlice("]}");
+    return buf.toOwnedSlice();
+}
+
 pub fn devicesJson(a: std.mem.Allocator, conn: *dbmod.Conn) ![]u8 {
     var stmt: ?*c.sqlite3_stmt = null;
     const sql = "SELECT uuid,ifnull(name,''),platform,status,ifnull(last_seen_at,'') FROM devices ORDER BY id DESC LIMIT 50";
@@ -74,4 +100,8 @@ pub fn commsJson(a: std.mem.Allocator, conn: *dbmod.Conn) ![]u8 {
     }
     try buf.appendSlice("]}");
     return buf.toOwnedSlice();
+}
+
+pub fn auditJson(a: std.mem.Allocator, conn: *dbmod.Conn) ![]u8 {
+    return rowsJson(a, conn, "SELECT action,ifnull(detail_json,''),created_at FROM audit_log ORDER BY id DESC LIMIT 50", "audit", 3);
 }
