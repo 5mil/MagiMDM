@@ -1,20 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"/><title>Comms archive</title>
-<script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-slate-950 text-slate-100 p-6">
-<h1 class="text-2xl font-semibold mb-2">Communications archive</h1>
-<p class="text-slate-400 text-sm mb-4">Native calls and SMS the agent uploaded.</p>
-<pre id="out" class="text-sm whitespace-pre-wrap">Loading…</pre>
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Comms — MagiMDM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#070b14] text-slate-100">
+<div class="max-w-5xl mx-auto px-6 py-8">
+  <p class="text-sm text-slate-500 mb-2"><a class="text-sky-400" href="/">Desk</a> / Comms</p>
+  <h1 class="text-3xl font-semibold mb-2">Communications</h1>
+  <p class="text-slate-400 mb-6">Native calls and SMS the Android agent uploaded. Not WhatsApp or iMessage.</p>
+  <div id="tbl" class="rounded-2xl border border-slate-800 overflow-hidden text-sm">
+    <p class="p-6 text-slate-400">Loading…</p>
+  </div>
+</div>
 <script>
 fetch('/api/parent/comms', {credentials:'same-origin'})
   .then(r => r.json())
   .then(j => {
     const ev = j.events || [];
-    document.getElementById('out').textContent = ev.map(e =>
-      [e.ts, e.name, e.direction, e.kind, e.peer, e.allowed ? 'ok' : 'block'].join('  ')
-    ).join('\n') || 'No events yet.';
+    const el = document.getElementById('tbl');
+    if (!ev.length) { el.innerHTML = '<p class="p-8 text-slate-400">No events yet. Enroll an Android agent first.</p>'; return; }
+    el.innerHTML = '<table class="w-full"><thead class="text-left text-slate-500 border-b border-slate-800"><tr><th class="p-3">When</th><th>Device</th><th>Dir</th><th>Kind</th><th>Peer</th><th>Allow</th></tr></thead><tbody>' +
+      ev.map(e => '<tr class="border-t border-slate-800"><td class="p-3">'+(e.ts||'')+'</td><td>'+(e.name||'')+'</td><td>'+(e.direction||'')+'</td><td>'+(e.kind||'')+'</td><td>'+(e.peer||'')+'</td><td>'+(e.allowed?'ok':'block')+'</td></tr>').join('') +
+      '</tbody></table>';
   })
-  .catch(() => { document.getElementById('out').textContent = 'No events yet.'; });
+  .catch(() => { document.getElementById('tbl').textContent = 'No events yet.'; });
 </script>
 </body></html>

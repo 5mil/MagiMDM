@@ -15,6 +15,12 @@ pub fn load(a: std.mem.Allocator, path: []const u8) ?[]u8 {
         @embedFile("enroll.html")
     else if (std.mem.eql(u8, path, "web/algebra_war.html"))
         @embedFile("algebra_war.html")
+    else if (std.mem.eql(u8, path, "web/devices.html"))
+        @embedFile("devices.html")
+    else if (std.mem.eql(u8, path, "web/policies.html"))
+        @embedFile("policies.html")
+    else if (std.mem.eql(u8, path, "web/settings.html"))
+        @embedFile("settings.html")
     else
         return null;
     return a.dupe(u8, src) catch null;

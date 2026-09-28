@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Settings — MagiMDM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#070b14] text-slate-100">
+<div class="max-w-3xl mx-auto px-6 py-8">
+  <p class="text-sm text-slate-500 mb-2"><a class="text-sky-400" href="/">Desk</a> / Settings</p>
+  <h1 class="text-3xl font-semibold mb-2">Settings</h1>
+  <p class="text-slate-400 mb-8">This host. Change passwords in SQLite until a form lands.</p>
+  <dl class="rounded-2xl border border-slate-800 bg-[#0b1220] divide-y divide-slate-800 text-sm">
+    <div class="p-4 flex justify-between"><dt class="text-slate-400">Console</dt><dd id="here"></dd></div>
+    <div class="p-4 flex justify-between"><dt class="text-slate-400">Moodle</dt><dd id="moodle"></dd></div>
+    <div class="p-4 flex justify-between"><dt class="text-slate-400">ISO store</dt><dd>data/iso · tools/os_fetch.sh</dd></div>
+    <div class="p-4 flex justify-between"><dt class="text-slate-400">Database</dt><dd>data/mdm.db</dd></div>
+  </dl>
+  <p class="mt-6 text-sm text-slate-500">Default login admin / changeme. After first week:
+    <code class="text-slate-300">UPDATE users SET password_hash='PLACEHOLDER$yourpass' WHERE username='admin';</code></p>
+</div>
+<script>
+const h = location.hostname;
+document.getElementById('here').textContent = location.origin;
+document.getElementById('moodle').textContent = 'http://' + h + ':8888';
+</script>
+</body></html>

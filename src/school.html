@@ -1,8 +1,37 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"/><title>School year</title>
-<script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-slate-950 text-slate-100 p-6">
-<h1 class="text-2xl mb-2">School year</h1>
-<p class="text-slate-400 text-sm mb-4">NY 100.10 records. Add a child and year from this desk next.</p>
-<p><a class="underline" href="/">Home</a> · <a class="underline" href="/lms">Courses</a> · <a class="underline" href="/comms">Comms</a></p>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>School year — MagiMDM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#070b14] text-slate-100">
+<div class="max-w-5xl mx-auto px-6 py-8">
+  <p class="text-sm text-slate-500 mb-2"><a class="text-sky-400" href="/">Desk</a> / School year</p>
+  <h1 class="text-3xl font-semibold mb-2">School year</h1>
+  <p class="text-slate-400 mb-8">Capability measure against NYS 100.10-style hours. Daily classwork stays in Moodle.</p>
+  <div class="grid sm:grid-cols-3 gap-4 mb-8">
+    <div class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5"><p class="text-xs text-slate-500">Current year</p><p id="year" class="text-xl font-medium mt-1">—</p></div>
+    <div class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5"><p class="text-xs text-slate-500">Courses in catalog</p><p id="ncourse" class="text-xl font-medium mt-1">—</p></div>
+    <a href="/lms" class="rounded-2xl border border-indigo-800 bg-indigo-950/40 p-5 hover:border-indigo-500"><p class="text-xs text-indigo-300">Classroom</p><p class="text-xl font-medium mt-1">Open Moodle</p></a>
+  </div>
+  <div class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5">
+    <h2 class="font-medium mb-3">Catalog</h2>
+    <ul id="courses" class="text-sm text-slate-300 space-y-1"></ul>
+  </div>
+  <details class="mt-6 text-sm text-slate-400">
+    <summary class="cursor-pointer text-slate-200">Advanced</summary>
+    <p class="mt-2">GET /api/school/year · GET /api/lms/courses · tables school_years, courses, hour_logs</p>
+  </details>
+</div>
+<script>
+fetch('/api/school/year',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{
+  document.getElementById('year').textContent = j.year || '2026-27';
+}).catch(()=>{});
+fetch('/api/lms/courses',{credentials:'same-origin'}).then(r=>r.json()).then(j=>{
+  const c = j.courses || [];
+  document.getElementById('ncourse').textContent = c.length;
+  document.getElementById('courses').innerHTML = c.map(x => '<li>' + (x.code||'') + ' — ' + (x.title||'') + '</li>').join('') || '<li>ALG1-WAR — Algebra 1 fluency</li>';
+}).catch(()=>{});
+</script>
 </body></html>

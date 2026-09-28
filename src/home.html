@@ -3,54 +3,64 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>MagiMDM</title>
+<title>Desk — MagiMDM</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-100">
-<header class="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-  <div>
-    <p class="text-xs uppercase tracking-widest text-sky-400">MagiMDM</p>
-    <h1 class="text-2xl font-semibold">Homeschool desk</h1>
-  </div>
-  <a class="text-sm text-slate-400 hover:text-white" href="/logout">Sign out</a>
-</header>
-<main class="p-6 max-w-6xl mx-auto">
-  <p class="text-slate-400 mb-6">Add devices from one page. QR for blank Androids. USB pack for laptops.</p>
-  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-    <a href="/enroll/pc" class="block rounded-2xl bg-sky-950 border border-sky-700 p-5 hover:border-sky-400">
-      <p class="text-sky-300 text-sm">Start here</p>
-      <p class="text-lg font-medium">Add a device (QR / USB)</p>
-    </a>
-    <a href="/school" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
-      <p class="text-sky-400 text-sm">School year</p>
-      <p class="text-lg font-medium">Hours, courses, NYS buckets</p>
-    </a>
-    <a href="/lms" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
-      <p class="text-sky-400 text-sm">Classroom</p>
-      <p class="text-lg font-medium">Moodle + catalog</p>
-    </a>
-    <a href="/algebra-war" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
-      <p class="text-sky-400 text-sm">Practice</p>
-      <p class="text-lg font-medium">Algebra War</p>
-    </a>
-    <a href="/comms" class="block rounded-2xl bg-slate-900 border border-slate-800 p-5 hover:border-sky-600">
-      <p class="text-sky-400 text-sm">Safeguards</p>
-      <p class="text-lg font-medium">Calls and messages</p>
-    </a>
-    <a id="moodle-link" href="http://192.168.50.143:8888" class="block rounded-2xl bg-indigo-950 border border-indigo-700 p-5 hover:border-indigo-400">
-      <p class="text-indigo-300 text-sm">Moodle</p>
-      <p class="text-lg font-medium">Open classroom login</p>
-    </a>
-  </div>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="SchoolDay"/><button class="w-full bg-sky-700 rounded-xl p-4">School day</button></form>
-    <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="AfterHours"/><button class="w-full bg-slate-700 rounded-xl p-4">After hours</button></form>
-    <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="ExamLock"/><button class="w-full bg-amber-700 rounded-xl p-4">Exam lock</button></form>
-    <form method="post" action="/devices/bulk"><input type="hidden" name="command" value="lock"/><button class="w-full bg-rose-800 rounded-xl p-4">Lock devices</button></form>
-  </div>
-</main>
+<body class="min-h-screen bg-[#070b14] text-slate-100">
+<div class="flex min-h-screen">
+  <aside class="hidden md:flex w-56 shrink-0 flex-col border-r border-slate-800/80 bg-[#0b1220] px-4 py-6">
+    <p class="text-[11px] uppercase tracking-[0.2em] text-sky-400/80">MagiMDM</p>
+    <p class="mt-1 text-sm text-slate-400">Homeschool fleet</p>
+    <nav class="mt-8 space-y-1 text-sm">
+      <a class="block rounded-lg bg-sky-900/40 px-3 py-2 text-sky-100" href="/">Desk</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/devices">Devices</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/enroll/pc">Add device</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/policies">Policies</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/school">School year</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/lms">Classroom</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/comms">Comms</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/algebra-war">Algebra War</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/settings">Settings</a>
+    </nav>
+    <a class="mt-auto text-xs text-slate-500 hover:text-slate-300" href="/logout">Sign out</a>
+  </aside>
+  <main class="flex-1 px-6 py-8 max-w-5xl">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-3xl font-semibold tracking-tight">Desk</h1>
+        <p class="text-slate-400 mt-1">House mode first. Devices and classroom stay one tap away.</p>
+      </div>
+      <a href="/enroll/pc" class="rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400">Add device</a>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
+      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="SchoolDay"/><button class="w-full rounded-2xl bg-sky-600/90 hover:bg-sky-500 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-sky-100/80">Mode</span><span class="text-lg font-medium">School</span></button></form>
+      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="AfterHours"/><button class="w-full rounded-2xl bg-slate-800 hover:bg-slate-700 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-slate-400">Mode</span><span class="text-lg font-medium">Free</span></button></form>
+      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="ExamLock"/><button class="w-full rounded-2xl bg-amber-800/80 hover:bg-amber-700 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-amber-100/70">Mode</span><span class="text-lg font-medium">Exam</span></button></form>
+      <form method="post" action="/devices/bulk"><input type="hidden" name="command" value="lock"/><button class="w-full rounded-2xl bg-rose-900/80 hover:bg-rose-800 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-rose-100/70">Command</span><span class="text-lg font-medium">Lock</span></button></form>
+    </div>
+    <section class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5 mb-6">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-medium">Fleet</h2>
+        <a class="text-sm text-sky-400" href="/devices">Open list</a>
+      </div>
+      <div id="fleet" class="text-sm text-slate-400">Checking devices…</div>
+    </section>
+    <div class="grid sm:grid-cols-3 gap-3">
+      <a href="/lms" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-4 hover:border-sky-700"><p class="text-xs text-indigo-300">Classroom</p><p class="font-medium">Moodle on :8888</p></a>
+      <a href="/school" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-4 hover:border-sky-700"><p class="text-xs text-sky-400">Year</p><p class="font-medium">Hours and NYS buckets</p></a>
+      <a href="/comms" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-4 hover:border-sky-700"><p class="text-xs text-sky-400">Safeguards</p><p class="font-medium">Calls and texts</p></a>
+    </div>
+  </main>
+</div>
 <script>
-  document.getElementById('moodle-link').href = 'http://' + location.hostname + ':8888';
+fetch('/api/parent/devices', {credentials:'same-origin'})
+  .then(r => r.json())
+  .then(j => {
+    const d = j.devices || [];
+    document.getElementById('fleet').textContent = d.length
+      ? d.map(x => (x.name || x.uuid) + ' · ' + (x.platform || '?') + ' · ' + (x.status || '')).join('\n')
+      : 'No devices yet. Add one with the QR / USB flow.';
+  })
+  .catch(() => { document.getElementById('fleet').textContent = 'Sign in again if this stays empty.'; });
 </script>
-</body>
-</html>
+</body></html>

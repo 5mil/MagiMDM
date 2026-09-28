@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Policies — MagiMDM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#070b14] text-slate-100">
+<div class="max-w-5xl mx-auto px-6 py-8">
+  <p class="text-sm text-slate-500 mb-2"><a class="text-sky-400" href="/">Desk</a> / Policies</p>
+  <h1 class="text-3xl font-semibold mb-2">Policies</h1>
+  <p class="text-slate-400 mb-8">House templates. Mining stays off on student policies. Apply from the desk buttons or here.</p>
+  <div class="grid sm:grid-cols-2 gap-4">
+    <form method="post" action="/devices/bulk" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5">
+      <h2 class="font-medium">SchoolDay</h2>
+      <p class="text-sm text-slate-400 mt-1 mb-4">Weekday class hours. Moodle + school apps.</p>
+      <input type="hidden" name="policy" value="SchoolDay"/>
+      <button class="rounded-lg bg-sky-600 px-3 py-1.5 text-sm">Apply to all</button>
+    </form>
+    <form method="post" action="/devices/bulk" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5">
+      <h2 class="font-medium">AfterHours</h2>
+      <p class="text-sm text-slate-400 mt-1 mb-4">Evening until curfew.</p>
+      <input type="hidden" name="policy" value="AfterHours"/>
+      <button class="rounded-lg bg-slate-700 px-3 py-1.5 text-sm">Apply to all</button>
+    </form>
+    <form method="post" action="/devices/bulk" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5">
+      <h2 class="font-medium">ExamLock</h2>
+      <p class="text-sm text-slate-400 mt-1 mb-4">Quiz window. Tight allowlist.</p>
+      <input type="hidden" name="policy" value="ExamLock"/>
+      <button class="rounded-lg bg-amber-700 px-3 py-1.5 text-sm">Apply to all</button>
+    </form>
+    <form method="post" action="/devices/bulk" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5">
+      <h2 class="font-medium">Lock</h2>
+      <p class="text-sm text-slate-400 mt-1 mb-4">Dinner, bedtime, lost device.</p>
+      <input type="hidden" name="command" value="lock"/>
+      <button class="rounded-lg bg-rose-800 px-3 py-1.5 text-sm">Queue lock</button>
+    </form>
+  </div>
+  <details class="mt-8 text-sm text-slate-400">
+    <summary class="cursor-pointer text-slate-200">Advanced — seeded JSON</summary>
+    <pre class="mt-3 bg-slate-950 p-3 rounded overflow-auto text-xs">mining.enabled = false on Baseline, SchoolDay, AfterHours, ExamLock, Weekend, Monitor</pre>
+  </details>
+</div>
+</body></html>
