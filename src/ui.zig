@@ -21,6 +21,8 @@ pub fn load(a: std.mem.Allocator, path: []const u8) ?[]u8 {
         @embedFile("policies.html")
     else if (std.mem.eql(u8, path, "web/settings.html"))
         @embedFile("settings.html")
+    else if (std.mem.eql(u8, path, "web/ai.html"))
+        @embedFile("ai.html")
     else
         return null;
     return a.dupe(u8, src) catch null;

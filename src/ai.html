@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Models — MagiMDM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-[#070b14] text-slate-100">
+<div class="max-w-3xl mx-auto px-6 py-8">
+  <p class="text-sm text-slate-500 mb-2"><a class="text-sky-400" href="/">Desk</a> / Models</p>
+  <h1 class="text-3xl font-semibold mb-1">Local models</h1>
+  <p class="text-slate-400 mb-6">Side tool. Uses Ollama on this box. Only models already pulled show up.</p>
+  <div class="flex flex-wrap gap-3 mb-4">
+    <label class="text-sm text-slate-400">Ollama URL
+      <input id="base" class="mt-1 block w-72 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-slate-100"/>
+    </label>
+    <label class="text-sm text-slate-400">Model
+      <select id="model" class="mt-1 block w-56 bg-slate-950 border border-slate-700 rounded px-2 py-1"></select>
+    </label>
+    <button id="ping" class="self-end rounded-lg bg-slate-800 px-3 py-1.5 text-sm">Refresh list</button>
+  </div>
+  <p id="status" class="text-sm text-slate-500 mb-4">Not connected yet.</p>
+  <div id="log" class="rounded-2xl border border-slate-800 bg-[#0b1220] min-h-[240px] p-4 text-sm space-y-2 mb-4"></div>
+  <form id="f" class="flex gap-2">
+    <input id="q" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2" placeholder="Parent / teacher prompt only" autocomplete="off"/>
+    <button class="rounded-xl bg-sky-600 px-4">Send</button>
+  </form>
+  <details class="mt-6 text-sm text-slate-400">
+    <summary class="cursor-pointer text-slate-200">Advanced</summary>
+    <p class="mt-2">GET {url}/api/tags · POST {url}/api/chat · docs/AI.md · never allow :11434 on SchoolDay student devices</p>
+  </details>
+</div>
+<script>
+const host = location.hostname;
+document.getElementById('base').value = 'http://' + host + ':11434';
+const log = document.getElementById('log');
+function line(who, t) {
+  const d = document.createElement('div');
+  d.innerHTML = '<span class="text-slate-500">' + who + '</span> ' + t;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+async function refresh() {
+  const base = document.getElementById('base').value.replace(/\/$/, '');
+  const st = document.getElementById('status');
+  const sel = document.getElementById('model');
+  sel.innerHTML = '';
+  try {
+    const r = await fetch(base + '/api/tags');
+    const j = await r.json();
+    const ms = j.models || [];
+    if (!ms.length) { st.textContent = 'Ollama is up. No models pulled yet.'; return; }
+    ms.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.name; o.textContent = m.name + (m.size ? ' · ' + Math.round(m.size/1e9) + ' GB' : '');
+      sel.appendChild(o);
+    });
+    st.textContent = ms.length + ' model(s) on this box.';
+  } catch (e) {
+    st.textContent = 'Cannot reach Ollama at ' + document.getElementById('base').value + '. See docs/AI.md.';
+  }
+}
+document.getElementById('ping').onclick = refresh;
+document.getElementById('f').onsubmit = async (e) => {
+  e.preventDefault();
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  document.getElementById('q').value = '';
+  line('you', q);
+  const base = document.getElementById('base').value.replace(/\/$/, '');
+  const model = document.getElementById('model').value;
+  if (!model) { line('box', 'Pull a model on tank first.'); return; }
+  try {
+    const r = await fetch(base + '/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ model, stream: false, messages: [{ role: 'user', content: q }] })
+    });
+    const j = await r.json();
+    line(model, (j.message && j.message.content) || JSON.stringify(j));
+  } catch (err) {
+    line('box', 'chat failed — CORS or Ollama down');
+  }
+};
+refresh();
+</script>
+</body></html>
