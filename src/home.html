@@ -3,54 +3,46 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Desk — MagiMDM</title>
+<title>House desk</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-[#070b14] text-slate-100">
 <div class="flex min-h-screen">
   <aside class="hidden md:flex w-56 shrink-0 flex-col border-r border-slate-800/80 bg-[#0b1220] px-4 py-6">
-    <p class="text-[11px] uppercase tracking-[0.2em] text-sky-400/80">MagiMDM</p>
-    <p class="mt-1 text-sm text-slate-400">Homeschool fleet</p>
+    <p class="text-[11px] uppercase tracking-[0.2em] text-sky-400/80">House</p>
+    <p class="mt-1 text-sm text-slate-400">Today</p>
     <nav class="mt-8 space-y-1 text-sm">
-      <a class="block rounded-lg bg-sky-900/40 px-3 py-2 text-sky-100" href="/">Desk</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/devices">Devices</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/enroll/pc">Add device</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/policies">Policies</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/school">School year</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/lms">Classroom</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/comms">Comms</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/algebra-war">Algebra War</a>
-      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/ai">Models</a>
+      <a class="block rounded-lg bg-sky-900/40 px-3 py-2" href="/">Home</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/devices">Kids' devices</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/enroll/pc">Add a device</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/lms">Classwork</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/comms">Calls &amp; texts</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/algebra-war">Math game</a>
+      <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/ai">Ask the box</a>
       <a class="block rounded-lg px-3 py-2 text-slate-300 hover:bg-slate-800/60" href="/settings">Settings</a>
     </nav>
-    <a class="mt-auto text-xs text-slate-500 hover:text-slate-300" href="/logout">Sign out</a>
+    <a class="mt-auto text-xs text-slate-500" href="/logout">Sign out</a>
   </aside>
   <main class="flex-1 px-6 py-8 max-w-5xl">
-    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
-      <div>
-        <h1 class="text-3xl font-semibold tracking-tight">Desk</h1>
-        <p class="text-slate-400 mt-1">House mode first. Classroom, fleet, library.</p>
-      </div>
-      <a href="/enroll/pc" class="rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400">Add device</a>
-    </div>
+    <p class="text-sm text-slate-400 mb-2">What should the house do right now?</p>
+    <h1 class="text-3xl font-semibold tracking-tight mb-6">Pick a mode</h1>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
-      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="SchoolDay"/><button class="w-full rounded-2xl bg-sky-600/90 hover:bg-sky-500 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-sky-100/80">Mode</span><span class="text-lg font-medium">School</span></button></form>
-      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="AfterHours"/><button class="w-full rounded-2xl bg-slate-800 hover:bg-slate-700 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-slate-400">Mode</span><span class="text-lg font-medium">Free</span></button></form>
-      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="ExamLock"/><button class="w-full rounded-2xl bg-amber-800/80 hover:bg-amber-700 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-amber-100/70">Mode</span><span class="text-lg font-medium">Exam</span></button></form>
-      <form method="post" action="/devices/bulk"><input type="hidden" name="command" value="lock"/><button class="w-full rounded-2xl bg-rose-900/80 hover:bg-rose-800 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-rose-100/70">Command</span><span class="text-lg font-medium">Lock</span></button></form>
+      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="SchoolDay"/><button class="w-full rounded-2xl bg-sky-600 hover:bg-sky-500 p-5 text-left"><span class="block text-xs uppercase tracking-wide text-sky-100/80">School hours</span><span class="text-lg font-medium">Class only</span></button></form>
+      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="AfterHours"/><button class="w-full rounded-2xl bg-slate-800 hover:bg-slate-700 p-5 text-left"><span class="block text-xs text-slate-400 uppercase">Evening</span><span class="text-lg font-medium">Free time</span></button></form>
+      <form method="post" action="/devices/bulk"><input type="hidden" name="policy" value="ExamLock"/><button class="w-full rounded-2xl bg-amber-800/80 hover:bg-amber-700 p-5 text-left"><span class="block text-xs text-amber-100/70 uppercase">Test</span><span class="text-lg font-medium">Quiz lock</span></button></form>
+      <form method="post" action="/devices/bulk"><input type="hidden" name="command" value="lock"/><button class="w-full rounded-2xl bg-rose-900/80 hover:bg-rose-800 p-5 text-left"><span class="block text-xs text-rose-100/70 uppercase">Stop</span><span class="text-lg font-medium">Lock screens</span></button></form>
     </div>
     <section class="rounded-2xl border border-slate-800 bg-[#0b1220] p-5 mb-6">
       <div class="flex justify-between items-center mb-3">
-        <h2 class="font-medium">Fleet</h2>
-        <a class="text-sm text-sky-400" href="/devices">Open list</a>
+        <h2 class="font-medium">Who is online</h2>
+        <a class="text-sm text-sky-400" href="/enroll/pc">Add another</a>
       </div>
-      <div id="fleet" class="text-sm text-slate-400">Checking devices…</div>
+      <div id="fleet" class="text-sm text-slate-400 whitespace-pre-wrap">Looking…</div>
     </section>
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      <a href="/lms" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-4 hover:border-sky-700"><p class="text-xs text-indigo-300">Classroom</p><p class="font-medium">Moodle :8888</p></a>
-      <a href="/school" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-4 hover:border-sky-700"><p class="text-xs text-sky-400">Year</p><p class="font-medium">Hours and NYS</p></a>
-      <a href="/ai" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-4 hover:border-sky-700"><p class="text-xs text-amber-300">Ollama</p><p class="font-medium">Models on this box</p></a>
-      <a href="http://192.168.50.143:9090/" class="rounded-2xl border border-slate-800 bg-[#0b1220] p-4 hover:border-sky-700"><p class="text-xs text-emerald-300">Arcis</p><p class="font-medium">Library / R1 infer</p></a>
+    <div class="grid sm:grid-cols-3 gap-3">
+      <a href="/lms" class="rounded-2xl border border-slate-800 p-4 hover:border-sky-700"><p class="text-xs text-indigo-300">Classwork</p><p class="font-medium">Open the classroom</p></a>
+      <a href="/ai" class="rounded-2xl border border-slate-800 p-4 hover:border-sky-700"><p class="text-xs text-amber-300">Ask</p><p class="font-medium">Talk to this box</p></a>
+      <a href="http://192.168.50.143:9090/" class="rounded-2xl border border-slate-800 p-4 hover:border-sky-700"><p class="text-xs text-emerald-300">Library</p><p class="font-medium">Books and answers</p></a>
     </div>
   </main>
 </div>
@@ -60,9 +52,9 @@ fetch('/api/parent/devices', {credentials:'same-origin'})
   .then(j => {
     const d = j.devices || [];
     document.getElementById('fleet').textContent = d.length
-      ? d.map(x => (x.name || x.uuid) + ' · ' + (x.platform || '?') + ' · ' + (x.status || '')).join('\n')
-      : 'No devices yet. Add one with the QR / USB flow.';
+      ? d.map(x => (x.name || 'Device') + ' — ' + (x.status === 'enrolled' ? 'seen' : (x.status || 'waiting'))).join('\n')
+      : 'No devices yet. Tap Add another and use the QR or USB steps.';
   })
-  .catch(() => { document.getElementById('fleet').textContent = 'Sign in again if this stays empty.'; });
+  .catch(() => { document.getElementById('fleet').textContent = 'Sign in again.'; });
 </script>
 </body></html>
