@@ -8,7 +8,7 @@ const algebra = @import("algebra.zig");
 const ui = @import("ui.zig");
 
 const login_html =
-    \\<!DOCTYPE html><html><body style="font-family:sans-serif;background:#020617;color:#e2e8f0;padding:2rem">
+    \\<!DOCTYPE html><html><body style="font-family:sans-serif;background:#070b14;color:#e2e8f0;padding:2rem">
     \\<h1>MagiMDM</h1>
     \\<form method="post" action="/login">
     \\Username <input name="username" value="admin"/><br/><br/>
@@ -64,6 +64,13 @@ fn loadFile(a: std.mem.Allocator, path: []const u8) ?[]u8 {
     return ui.load(a, path);
 }
 
+fn page(a: std.mem.Allocator, w: *std.Io.Writer, file: []const u8) !void {
+    if (loadFile(a, file)) |html| {
+        defer a.free(html);
+        return reply(w, "200 OK", "text/html", "", html);
+    }
+}
+
 fn readHttp(r: *std.Io.Reader, buf: []u8) usize {
     var n: usize = 0;
     while (n < buf.len) {
@@ -105,7 +112,7 @@ pub fn main(init: std.process.Init) !void {
     const addr = try std.Io.net.IpAddress.parse(cfg.host, cfg.port);
     var server = try addr.listen(io, .{});
     defer server.deinit(io);
-    std.debug.print("MagiMDM LAN http://{s}:{d}/login  (use tank LAN IP from other PCs)\n", .{ cfg.host, cfg.port });
+    std.debug.print("MagiMDM LAN http://{s}:{d}/login\n", .{ cfg.host, cfg.port });
 
     while (true) {
         const stream = server.accept(io) catch continue;
@@ -132,7 +139,8 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, req: []const u8, w: *std.Io.W
     const line = head[0..line_end];
     var it = std.mem.splitScalar(u8, line, ' ');
     const method = it.next() orelse return;
-    const path = it.next() orelse return;
+    var path = it.next() orelse return;
+    if (std.mem.indexOfScalar(u8, path, '?')) |q| path = path[0..q];
 
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/login")) {
         return reply(w, "200 OK", "text/html", "", login_html);
@@ -210,7 +218,7 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, req: []const u8, w: *std.Io.W
         defer a.free(q);
         break :blk (try conn.queryText(a, q)) != null;
     } else false;
-    const gated = std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home") or std.mem.eql(u8, path, "/comms") or std.mem.eql(u8, path, "/school") or std.mem.eql(u8, path, "/lms") or std.mem.eql(u8, path, "/algebra-war") or std.mem.startsWith(u8, path, "/enroll") or std.mem.startsWith(u8, path, "/api/parent") or std.mem.startsWith(u8, path, "/api/game") or std.mem.startsWith(u8, path, "/api/school") or std.mem.startsWith(u8, path, "/api/lms");
+    const gated = std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home") or std.mem.eql(u8, path, "/comms") or std.mem.eql(u8, path, "/school") or std.mem.eql(u8, path, "/lms") or std.mem.eql(u8, path, "/algebra-war") or std.mem.eql(u8, path, "/devices") or std.mem.eql(u8, path, "/policies") or std.mem.eql(u8, path, "/settings") or std.mem.startsWith(u8, path, "/enroll") or std.mem.startsWith(u8, path, "/api/parent") or std.mem.startsWith(u8, path, "/api/game") or std.mem.startsWith(u8, path, "/api/school") or std.mem.startsWith(u8, path, "/api/lms");
     if (gated and !authed) return reply(w, "302 Found", "text/plain", "Location: /login\r\n", "");
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/parent/devices")) {
         return reply(w, "200 OK", "application/json", "", "{\"devices\":[]}");
@@ -222,7 +230,7 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, req: []const u8, w: *std.Io.W
         return reply(w, "200 OK", "application/json", "", "{\"year\":\"2026-27\"}");
     }
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/api/lms/courses")) {
-        return reply(w, "200 OK", "application/json", "", "{\"courses\":[{\"code\":\"ALG1-WAR\"}]}");
+        return reply(w, "200 OK", "application/json", "", "{\"courses\":[{\"code\":\"ALG1-WAR\",\"title\":\"Algebra 1 fluency\"}]}");
     }
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/game/session")) {
         const band_s = jsonGet(body, "band") orelse "2";
@@ -240,9 +248,9 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, req: []const u8, w: *std.Io.W
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/api/game/move")) {
         const sid_s = jsonGet(body, "id") orelse "0";
         const ans = jsonGet(body, "answer") orelse "";
-        const q = try std.fmt.allocPrintSentinel(a, "SELECT current_x FROM game_sessions WHERE id={s}", .{sid_s}, 0);
-        defer a.free(q);
-        const xs = try conn.queryText(a, q);
+        const qsql = try std.fmt.allocPrintSentinel(a, "SELECT current_x FROM game_sessions WHERE id={s}", .{sid_s}, 0);
+        defer a.free(qsql);
+        const xs = try conn.queryText(a, qsql);
         const expected: i32 = if (xs) |s| std.fmt.parseInt(i32, s, 10) catch 0 else 0;
         if (xs) |s| a.free(s);
         const ok = algebra.judgeSolve(expected, ans);
@@ -283,54 +291,54 @@ fn handle(a: std.mem.Allocator, conn: *dbmod.Conn, req: []const u8, w: *std.Io.W
         return reply(w, "200 OK", "application/json", "", out);
     }
     if (std.mem.eql(u8, method, "GET") and (std.mem.eql(u8, path, "/") or std.mem.eql(u8, path, "/home"))) {
-        if (loadFile(a, "web/home.html")) |html| {
-            defer a.free(html);
-            return reply(w, "200 OK", "text/html", "", html);
-        }
-        return reply(w, "200 OK", "text/html", "", "<a href=/school>School</a> <a href=/lms>Courses</a> <a href=/algebra-war>Algebra War</a> <a href=/enroll/pc>Enroll PC</a> <a href=/comms>Comms</a>");
+        try page(a, w, "web/home.html");
+        return;
     }
-    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/enroll/pc")) {
-        if (loadFile(a, "web/enroll_pc.html")) |html| {
-            defer a.free(html);
-            return reply(w, "200 OK", "text/html", "", html);
-        }
+    if (std.mem.eql(u8, method, "GET") and (std.mem.eql(u8, path, "/enroll") or std.mem.eql(u8, path, "/enroll/pc"))) {
+        try page(a, w, "web/enroll.html");
+        return;
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/devices")) {
+        try page(a, w, "web/devices.html");
+        return;
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/policies")) {
+        try page(a, w, "web/policies.html");
+        return;
+    }
+    if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/settings")) {
+        try page(a, w, "web/settings.html");
+        return;
     }
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/comms")) {
-        if (loadFile(a, "web/comms.html")) |html| {
-            defer a.free(html);
-            return reply(w, "200 OK", "text/html", "", html);
-        }
+        try page(a, w, "web/comms.html");
+        return;
     }
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/school")) {
-        if (loadFile(a, "web/school.html")) |html| {
-            defer a.free(html);
-            return reply(w, "200 OK", "text/html", "", html);
-        }
+        try page(a, w, "web/school.html");
+        return;
     }
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/lms")) {
-        if (loadFile(a, "web/lms.html")) |html| {
-            defer a.free(html);
-            return reply(w, "200 OK", "text/html", "", html);
-        }
+        try page(a, w, "web/lms.html");
+        return;
     }
     if (std.mem.eql(u8, method, "GET") and std.mem.eql(u8, path, "/algebra-war")) {
-        if (loadFile(a, "web/algebra_war.html")) |html| {
-            defer a.free(html);
-            return reply(w, "200 OK", "text/html", "", html);
-        }
+        try page(a, w, "web/algebra_war.html");
+        return;
     }
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/enroll/pc")) {
         const tok = try auth.generateSessionToken(a);
         defer a.free(tok);
-        const ins = try std.fmt.allocPrintSentinel(a, "INSERT INTO enrollment_tokens(token,label) VALUES('{s}','pc')", .{tok}, 0);
+        const plat = formGet(body, "platform") orelse "linux";
+        const ins = try std.fmt.allocPrintSentinel(a, "INSERT INTO enrollment_tokens(token,label) VALUES('{s}','{s}')", .{ tok, plat }, 0);
         defer a.free(ins);
         conn.exec(ins) catch {};
-        const page = try std.fmt.allocPrint(a, "<pre>TOKEN={s}\n./tools/usb_pack.sh /tmp/usb linux</pre>", .{tok});
-        defer a.free(page);
-        return reply(w, "200 OK", "text/html", "", page);
+        const loc = try std.fmt.allocPrint(a, "Location: /enroll/pc?token={s}&platform={s}\r\n", .{ tok, plat });
+        defer a.free(loc);
+        return reply(w, "302 Found", "text/plain", loc, "ok");
     }
     if (std.mem.eql(u8, method, "POST") and std.mem.eql(u8, path, "/devices/bulk")) {
-        return reply(w, "200 OK", "text/plain", "", "queued\n");
+        return reply(w, "302 Found", "text/plain", "Location: /\r\n", "queued\n");
     }
     return reply(w, "404 Not Found", "text/plain", "", "not found\n");
 }
